@@ -9,72 +9,75 @@
  */
 
 :root {
-  --bg: #090a0d;
-  --surface: #121318;
-  --surface-2: #1a1c23;
-  --border: #262933;
-  --border-strong: #3b3f4e;
-  --border-glow: rgba(239, 68, 68, 0.4);
-  --text: #f3f4f6;
-  --text-muted: #9ca3af;
-  --accent: #ef4444;
-  --accent-hover: #dc2626;
-  --accent-soft: rgba(239, 68, 68, 0.12);
-  --accent-glow: 0 0 20px rgba(239, 68, 68, 0.28);
-  --accent-text: #f87171;
-  --warn: #f59e0b;
-  --warn-soft: rgba(245, 158, 11, 0.12);
-  --warn-border: rgba(245, 158, 11, 0.3);
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.15);
-  --experimental: #c084fc;
-  --experimental-soft: rgba(192, 132, 252, 0.12);
-}
-
-:root[data-theme="light"] {
-  --bg: #fafafa;
-  --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
-  --border-glow: rgba(220, 38, 38, 0.3);
-  --text: #09090b;
-  --text-muted: #52525b;
-  --accent: #dc2626;
-  --accent-hover: #b91c1c;
-  --accent-soft: #fee2e2;
-  --accent-glow: 0 0 15px rgba(220, 38, 38, 0.18);
-  --accent-text: #b91c1c;
-  --warn: #b45309;
-  --warn-soft: #fef3c7;
-  --warn-border: #fde68a;
-  --danger: #dc2626;
-  --danger-soft: #fee2e2;
-  --experimental: #7e22ce;
-  --experimental-soft: #f3e8ff;
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-2: #F1F5F9;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --accent: #0D9488;
+  --accent-hover: #0F766E;
+  --accent-soft: #CCFBF1;
+  --accent-text: #115E59;
+  --warn: #D97706;
+  --warn-soft: #FEF3C7;
+  --warn-border: #FDE68A;
+  --warn-text: #92400E;
+  --danger: #DC2626;
+  --danger-soft: #FEE2E2;
+  --danger-text: #991B1B;
+  --experimental: #7C3AED;
+  --experimental-soft: #F5F3FF;
+  --experimental-text: #5B21B6;
 }
 
 :root[data-theme="dark"], :root:not([data-theme="light"]) {
-  --bg: #08090c;
-  --surface: #111317;
-  --surface-2: #181b22;
-  --border: #232732;
-  --border-strong: #373d4d;
-  --border-glow: rgba(239, 68, 68, 0.4);
-  --text: #f3f4f6;
-  --text-muted: #9ca3af;
-  --accent: #ef4444;
-  --accent-hover: #dc2626;
-  --accent-soft: rgba(239, 68, 68, 0.12);
-  --accent-glow: 0 0 20px rgba(239, 68, 68, 0.28);
-  --accent-text: #f87171;
-  --warn: #f59e0b;
-  --warn-soft: rgba(245, 158, 11, 0.12);
-  --warn-border: rgba(245, 158, 11, 0.3);
-  --danger: #ef4444;
+  --bg: #0B0F17;
+  --surface: #131B2A;
+  --surface-2: #1E293B;
+  --border: #1E293B;
+  --border-strong: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --accent: #14B8A6;
+  --accent-hover: #2DD4BF;
+  --accent-soft: rgba(20, 184, 166, 0.15);
+  --accent-text: #5EEAD4;
+  --warn: #F59E0B;
+  --warn-soft: rgba(245, 158, 11, 0.15);
+  --warn-border: rgba(245, 158, 11, 0.35);
+  --warn-text: #FBBF24;
+  --danger: #EF4444;
   --danger-soft: rgba(239, 68, 68, 0.15);
-  --experimental: #c084fc;
-  --experimental-soft: rgba(192, 132, 252, 0.12);
+  --danger-text: #F87171;
+  --experimental: #A78BFA;
+  --experimental-soft: rgba(167, 139, 250, 0.15);
+  --experimental-text: #C4B5FD;
+}
+
+:root[data-theme="light"] {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-2: #F1F5F9;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --accent: #0D9488;
+  --accent-hover: #0F766E;
+  --accent-soft: #CCFBF1;
+  --accent-text: #115E59;
+  --warn: #D97706;
+  --warn-soft: #FEF3C7;
+  --warn-border: #FDE68A;
+  --warn-text: #92400E;
+  --danger: #DC2626;
+  --danger-soft: #FEE2E2;
+  --danger-text: #991B1B;
+  --experimental: #7C3AED;
+  --experimental-soft: #F5F3FF;
+  --experimental-text: #5B21B6;
 }
 
 /*
@@ -88,11 +91,6 @@ html {
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", "Noto Sans Kannada",
     "Noto Sans Telugu", "Noto Sans Malayalam", "Nirmala UI", sans-serif;
-  color-scheme: dark;
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
 }
 
 body {
@@ -101,16 +99,12 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  background-image: 
-    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(239, 68, 68, 0.08), transparent 70%),
-    radial-gradient(ellipse 40% 30% at 90% 90%, rgba(239, 68, 68, 0.04), transparent 60%);
-  background-attachment: fixed;
   min-height: 100vh;
 }
 
 /* Indic text needs more leading than Latin at the same size. */
 .indic {
-  line-height: 1.9;
+  line-height: 1.85;
 }
 
 .mono {
@@ -123,75 +117,71 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
 .card:hover {
   border-color: var(--border-strong);
 }
 
-.card-glow {
-  position: relative;
-  overflow: hidden;
-}
-
-.card-glow::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.8;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   padding: 0.45rem 0.95rem;
   border-radius: 8px;
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn:hover:not(:disabled) { 
   background: var(--surface-2); 
   border-color: var(--text-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled { 
+  opacity: 0.45; 
+  cursor: not-allowed; 
+}
 
 .btn-primary {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  border-color: #ef4444;
-  color: #ffffff;
-  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.35);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFFFF;
   font-weight: 600;
 }
 
 .btn-primary:hover:not(:disabled) { 
-  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
-  transform: translateY(-1px);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.btn-danger:hover:not(:disabled) { 
+  opacity: 0.92;
 }
 
 .input, .select, .textarea {
   width: 100%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  padding: 0.45rem 0.75rem;
   color: var(--text);
-  font-size: 0.92rem;
+  font-size: 0.875rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -206,18 +196,18 @@ body {
   align-items: center;
   gap: 0.3rem;
   padding: 0.15rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 9999px;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   border: 1px solid transparent;
 }
 
 .badge-experimental {
   background: var(--experimental-soft);
-  color: var(--experimental);
-  border-color: rgba(192, 132, 252, 0.3);
+  color: var(--experimental-text);
+  border-color: var(--experimental-soft);
 }
 
 .badge-unavailable {
@@ -229,25 +219,31 @@ body {
 .badge-local {
   background: var(--accent-soft);
   color: var(--accent-text);
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: var(--accent-soft);
+}
+
+.badge-warn {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  border-color: var(--warn-border);
 }
 
 .notice {
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   border: 1px solid;
 }
 
 .notice-warn {
   background: var(--warn-soft);
   border-color: var(--warn-border);
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .notice-info {
   background: var(--accent-soft);
-  border-color: rgba(239, 68, 68, 0.35);
+  border-color: var(--accent);
   color: var(--accent-text);
 }
 
@@ -256,7 +252,6 @@ body {
 *:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* --- print --------------------------------------------------------------- */

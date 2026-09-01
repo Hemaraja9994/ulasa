@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -15,19 +16,24 @@ const LINKS = [
 
 export function Nav() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header
-      className="no-print sticky top-0 z-20 border-b backdrop-blur-md"
+      className="no-print sticky top-0 z-30 border-b backdrop-blur-md"
       style={{ 
         borderColor: "var(--border)", 
-        background: "rgba(9, 10, 13, 0.82)" 
+        background: "color-mix(in srgb, var(--surface) 88%, transparent)" 
       }}
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2.5 md:px-6">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 md:px-6">
+        {/* Brand & Desktop Links */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 no-underline group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-500/20 group-hover:scale-105 transition-transform">
+            <div 
+              className="flex h-8 w-8 items-center justify-center rounded-lg shadow-sm group-hover:opacity-90 transition-opacity"
+              style={{ background: "var(--accent)" }}
+            >
               <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 10v3" />
                 <path d="M6 6v11" />
@@ -39,20 +45,24 @@ export function Nav() {
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-black tracking-tight" style={{ color: "var(--text)" }}>
+                <span className="text-base font-bold tracking-tight" style={{ color: "var(--text)" }}>
                   ULASA
                 </span>
-                <span className="rounded bg-red-950/80 px-1 py-0.2 text-[10px] font-bold uppercase tracking-wider text-red-400 border border-red-800/50">
-                  v0.1
+                <span 
+                  className="rounded px-1.5 py-0.2 text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}
+                >
+                  Clinical
                 </span>
               </div>
-              <span className="hidden sm:inline text-[11px] leading-none" style={{ color: "var(--text-muted)" }}>
+              <span className="hidden sm:inline text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>
                 Language Assessment & Sample Analysis
               </span>
             </div>
           </Link>
 
-          <nav className="flex flex-wrap items-center gap-1">
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
             {LINKS.map((link) => {
               const active = pathname === link.href;
               return (
@@ -61,10 +71,9 @@ export function Nav() {
                   href={link.href}
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all no-underline"
                   style={{
-                    color: active ? "#ffffff" : "var(--text-muted)",
-                    background: active ? "linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(185, 28, 28, 0.28))" : "transparent",
-                    border: active ? "1px solid rgba(239, 68, 68, 0.45)" : "1px solid transparent",
-                    boxShadow: active ? "0 0 12px rgba(239, 68, 68, 0.2)" : "none",
+                    color: active ? "var(--accent-text)" : "var(--text-muted)",
+                    background: active ? "var(--accent-soft)" : "transparent",
+                    border: active ? "1px solid var(--accent)" : "1px solid transparent",
                   }}
                   aria-current={active ? "page" : undefined}
                 >
@@ -75,16 +84,68 @@ export function Nav() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span 
-            className="badge badge-local flex items-center gap-1.5 text-[11px]" 
-            title="Local-first: All analysis and data remain private in this browser."
+        {/* Right side status & mobile hamburger */}
+        <div className="flex items-center gap-3">
+          <div 
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+            style={{ 
+              background: "rgba(16, 185, 129, 0.12)", 
+              color: "#059669", 
+              border: "1px solid rgba(16, 185, 129, 0.3)" 
+            }}
+            title="Local-First: All analysis is computed in this browser. No audio or transcripts are uploaded."
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
-            Local First
-          </span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="font-semibold text-[11px]">100% On-Device / Private</span>
+          </div>
+
+          {/* Mobile hamburger button */}
+          <button
+            type="button"
+            className="md:hidden p-1.5 rounded-lg border text-muted hover:bg-surface-2"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle Navigation Menu"
+            aria-expanded={mobileOpen}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {mobileOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Mobile / Tablet Collapsible Drawer */}
+      {mobileOpen && (
+        <nav 
+          className="md:hidden border-t px-4 py-3 space-y-1"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        >
+          {LINKS.map((link) => {
+            const active = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-lg px-3 py-2 text-sm font-medium transition-colors no-underline"
+                style={{
+                  color: active ? "var(--accent-text)" : "var(--text)",
+                  background: active ? "var(--accent-soft)" : "transparent",
+                  border: active ? "1px solid var(--accent)" : "1px solid transparent",
+                }}
+                aria-current={active ? "page" : undefined}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </header>
   );
 }

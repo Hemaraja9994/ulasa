@@ -1,89 +1,84 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useId } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { scriptTextProps } from "@/components/LanguageBadge";
+import type { Sample } from "@/core/types";
+import { analysisSet } from "@/core/analyse";
 
-interface DeleteConfirmModalProps {
-  isOpen: boolean;
-  sampleTitle: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
+/**
+ * Deleting a sample is never silent.
+ *
+ * The dialog names the sample in its own script, shows the case code and how
+ * many utterances are about to go, and says plainly that there is no server
+ * copy to restore from — because there is no server. The third action exists
+ * so that "I want this off this machine" does not have to mean "I want this
+ * gone": export first, then delete.
+ */
 export function DeleteConfirmModal({
   isOpen,
-  sampleTitle,
+  sample,
   onConfirm,
   onCancel,
-}: DeleteConfirmModalProps) {
-  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  onExportThenDelete,
+}: {
+  isOpen: boolean;
+  sample: Sample | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onExportThenDelete?: () => void;
+}) {
+  const headingId = useId();
+  if (!sample) return null;
 
-  useEffect(() => {
-    if (isOpen) {
-      cancelBtnRef.current?.focus();
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") onCancel();
-      };
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen, onCancel]);
-
-  if (!isOpen) return null;
+  const set = analysisSet(sample);
+  const caseCode = sample.caseId !== "unassigned" ? sample.caseId.toUpperCase() : null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-modal-title"
-      style={{ background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="card w-full max-w-md p-6 shadow-xl space-y-4"
-        style={{ borderColor: "var(--border-strong)" }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-            style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 id="delete-modal-title" className="text-base font-semibold" style={{ color: "var(--text)" }}>
-              Delete sample?
-            </h3>
-            <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-              Are you sure you want to delete <strong className="font-semibold" style={{ color: "var(--text)" }}>&quot;{sampleTitle}&quot;</strong>? This action cannot be undone and deletes local transcripts and recordings.
-            </p>
-          </div>
+    <ConfirmDialog open={isOpen} onCancel={onCancel} labelledBy={headingId}>
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M12 3l9 17H3z" />
+            <path d="M12 9v5M12 17.5v.5" />
+          </svg>
         </div>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            ref={cancelBtnRef}
-            type="button"
-            className="btn"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={onConfirm}
-          >
-            Delete Sample
-          </button>
+        <div className="min-w-0">
+          <h2 id={headingId} className="text-base font-semibold" style={{ color: "var(--danger-text)" }}>
+            Delete this sample?
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "var(--danger-text)" }}>
+            <span className="font-semibold" {...scriptTextProps(sample.language)}>
+              {sample.title}
+            </span>
+            {caseCode && <span className="mono"> · {caseCode}</span>}
+            <span className="num"> · {sample.utterances.length} utterances, {set.length} complete &amp; intelligible</span>
+            {" "}and any linked audio are removed from this browser. There is no server copy to restore from.
+          </p>
         </div>
       </div>
-    </div>
+
+      <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+        {onExportThenDelete && (
+          <button
+            type="button"
+            className="text-[13.5px] font-medium underline underline-offset-2"
+            style={{ color: "var(--danger-text)" }}
+            onClick={onExportThenDelete}
+          >
+            Export first, then delete
+          </button>
+        )}
+        <button type="button" className="btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-danger" onClick={onConfirm}>
+          Delete permanently
+        </button>
+      </div>
+    </ConfirmDialog>
   );
 }

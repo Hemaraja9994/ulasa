@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Bcp47, CaseRecord, Sample, Utterance } from "@/core/types";
+import type { AnalysisSetKind, Bcp47, CaseRecord, Sample, Utterance } from "@/core/types";
 import type { RubricScores } from "@/core/rubrics";
 
 /**
@@ -37,6 +37,15 @@ export interface CloudSettings {
   googleApiKey: string;
   /** Strip names, phone numbers and addresses before any external call. */
   redactBeforeSending: boolean;
+  /**
+   * Name of the external provider the clinician has armed, or null.
+   *
+   * Arming is deliberate and typed: it is the only state in which audio or
+   * text can leave the device, so it is stored explicitly rather than inferred
+   * from whether a key happens to be present. It drives the red chip on every
+   * route.
+   */
+  armedProvider: string | null;
 }
 
 interface State {
@@ -49,6 +58,16 @@ interface State {
   cloud: CloudSettings;
   audit: AuditEntry[];
   theme: "system" | "light" | "dark";
+  /**
+   * Indic script size in the Studio editor. 17px is the floor — below it the
+   * matras and conjuncts a clinician is judging are not reliably legible — so
+   * nothing smaller is offered.
+   */
+  indicSize: 17 | 19 | 21;
+  /** Whether the analysis set is the C&I subset or every target utterance. */
+  analysisSetKind: AnalysisSetKind;
+  /** Runtime only: whether a sidecar answered on 127.0.0.1. Never persisted. */
+  sidecarReachable: boolean;
 
   /**
    * False until the persisted state has been read back from localStorage.
@@ -77,6 +96,13 @@ interface State {
 
   setCloud: (patch: Partial<CloudSettings>) => void;
   setTheme: (theme: State["theme"]) => void;
+  setIndicSize: (size: State["indicSize"]) => void;
+  setAnalysisSetKind: (kind: AnalysisSetKind) => void;
+  setSidecarReachable: (reachable: boolean) => void;
+  /** Arm an external provider. Audited, because it is the one action that can
+   *  send a child's speech off this device. */
+  armProvider: (provider: string) => void;
+  disarmProvider: () => void;
   log: (action: string, detail: string, external?: boolean) => void;
   clearAll: () => void;
 }
@@ -89,6 +115,7 @@ const DEFAULT_CLOUD: CloudSettings = {
   bhashiniApiKey: "",
   googleApiKey: "",
   redactBeforeSending: true,
+  armedProvider: null,
 };
 
 export const useStore = create<State>()(
@@ -102,6 +129,9 @@ export const useStore = create<State>()(
       cloud: DEFAULT_CLOUD,
       audit: [],
       theme: "system",
+      indicSize: 19,
+      analysisSetKind: "complete_intelligible_verbal",
+      sidecarReachable: false,
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
@@ -120,19 +150,26 @@ export const useStore = create<State>()(
         })),
 
       addSample: (sample) =>
-        set((s) => ({ samples: [sample, ...s.samples], activeSampleId: sample.id })),
+        set((s) => ({
+          samples: [{ ...sample, updatedAt: new Date().toISOString() }, ...s.samples],
+          activeSampleId: sample.id,
+        })),
 
       updateSample: (id, patch) =>
         set((s) => ({
           samples: s.samples.map((sample) =>
-            sample.id === id ? { ...sample, ...patch } : sample,
+            sample.id === id
+              ? { ...sample, ...patch, updatedAt: new Date().toISOString() }
+              : sample,
           ),
         })),
 
       replaceUtterances: (sampleId, utterances) =>
         set((s) => ({
           samples: s.samples.map((sample) =>
-            sample.id === sampleId ? { ...sample, utterances } : sample,
+            sample.id === sampleId
+              ? { ...sample, utterances, updatedAt: new Date().toISOString() }
+              : sample,
           ),
         })),
 
@@ -153,6 +190,32 @@ export const useStore = create<State>()(
       setCloud: (patch) => set((s) => ({ cloud: { ...s.cloud, ...patch } })),
 
       setTheme: (theme) => set({ theme }),
+
+      setIndicSize: (indicSize) => set({ indicSize }),
+
+      setAnalysisSetKind: (analysisSetKind) => set({ analysisSetKind }),
+
+      setSidecarReachable: (sidecarReachable) => set({ sidecarReachable }),
+
+      armProvider: (provider) => {
+        set((s) => ({ cloud: { ...s.cloud, enabled: true, armedProvider: provider } }));
+        get().log(
+          "arm_provider",
+          `Armed the external provider "${provider}". Audio or text from new samples may leave this device until it is disarmed.`,
+          true,
+        );
+      },
+
+      disarmProvider: () => {
+        const previous = get().cloud.armedProvider;
+        set((s) => ({ cloud: { ...s.cloud, enabled: false, armedProvider: null } }));
+        get().log(
+          "disarm_provider",
+          previous
+            ? `Disarmed "${previous}". Back to device only.`
+            : "Disarmed external providers. Back to device only.",
+        );
+      },
 
       log: (action, detail, external = false) =>
         set((s) => ({
@@ -193,6 +256,8 @@ export const useStore = create<State>()(
         cloud: s.cloud,
         audit: s.audit,
         theme: s.theme,
+        indicSize: s.indicSize,
+        analysisSetKind: s.analysisSetKind,
       }),
       onRehydrateStorage: () => (state) => {
         // Runs once localStorage has been read, whether or not there was

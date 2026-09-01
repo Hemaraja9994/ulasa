@@ -1,38 +1,62 @@
 # ULASA Design System Tokens & Component Rules
 
-## 1. Color Tokens
+## 1. Color Tokens — "Graphite and Mint" (Palette B)
 
-### Light Theme (Clinical Calm)
-- `--bg`: `#F8FAFC` (Slate 50)
-- `--surface`: `#FFFFFF` (Pure white card)
-- `--surface-2`: `#F1F5F9` (Slate 100 table header/subdued area)
-- `--border`: `#E2E8F0` (Slate 200 card/table border)
-- `--border-strong`: `#CBD5E1` (Slate 300 input border)
-- `--text`: `#0F172A` (Slate 900 primary ink)
-- `--text-muted`: `#64748B` (Slate 500 secondary ink)
-- `--accent`: `#0D9488` (Teal 600 clinical brand primary)
-- `--accent-hover`: `#0F766E` (Teal 700)
-- `--accent-soft`: `#CCFBF1` (Teal 100 soft badge/pill)
-- `--accent-text`: `#115E59` (Teal 800 readable accent text)
+Graphite chrome (a fixed dark nav/table-header pair that does **not** swap
+with the light/dark toggle), a cool near-white workspace, and one saturated
+mint reserved for the on-device signal. See `src/app/globals.css` for the
+authoritative values.
 
-### Dark Theme (Slate Obsidian)
-- `--bg`: `#0B0F17` (Deep Slate Slate 950)
-- `--surface`: `#131B2A` (Slate 900 elevated surface)
-- `--surface-2`: `#1E293B` (Slate 800 header/subdued area)
-- `--border`: `#1E293B` (Slate 800 card border)
-- `--border-strong`: `#334155` (Slate 700 input border)
-- `--text`: `#F8FAFC` (Slate 50 primary ink)
-- `--text-muted`: `#94A3B8` (Slate 400 secondary ink)
-- `--accent`: `#14B8A6` (Teal 500 clinical brand primary)
-- `--accent-hover`: `#2DD4BF` (Teal 400)
-- `--accent-soft`: `rgba(20, 184, 166, 0.14)` (Soft teal wash)
-- `--accent-text`: `#5EEAD4` (Teal 300 readable accent text)
+### Light Theme (default)
+- `--bg`: `#EFF1F3`
+- `--surface`: `#FFFFFF` (card)
+- `--surface-2`: `#EAEEF2` (subdued area / context chip background)
+- `--border`: `#D8DDE3`
+- `--border-strong`: `#C3CBD4`
+- `--text`: `#0D1116`
+- `--text-muted`: `#56616D`
+- `--text-faint`: `#7A8794` (tertiary ink — case codes, stat lines)
+- `--accent`: `#00736B` (mint-teal clinical brand primary)
+- `--accent-hover`: `#005952`
+- `--accent-soft`: `#E4F7F3`
+- `--accent-text`: `#004F49`
+
+### Dark Theme
+- `--bg`: `#0B0F14`
+- `--surface`: `#141A20`
+- `--surface-2`: `#1C242C`
+- `--border`: `#232B33`
+- `--border-strong`: `#34404A`
+- `--text`: `#F4F7F9`
+- `--text-muted`: `#94A3B0`
+- `--text-faint`: `#7A8794`
+- `--accent`: `#2BC0AC` (saturated mint)
+- `--accent-hover`: `#6FE0CE`
+- `--accent-soft`: `rgba(43, 192, 172, 0.16)`
+- `--accent-text`: `#6FE0CE`
+
+### Graphite chrome (fixed, both themes)
+- `--chrome-bg`: `#141A20` — top nav background
+- `--chrome-text`: `#F4F7F9`, `--chrome-text-muted`: `#94A3B0`
+- `--chrome-accent`: `#2BC0AC`, `--chrome-accent-soft`: `rgba(43,192,172,.16)`, `--chrome-accent-text`: `#6FE0CE`
+- `--table-header-bg`: `#1F2830`, `--table-header-text`: `#A8B4C0` — samples table header row
+
+### Language rails (EN HI KN TA TE ML)
+Higher-chroma than the rest of the palette so they read on both the light
+workspace and the dark chrome. One colour, three places: the samples table's
+left border, the language badge, and a demonstration card's top border.
+- `--lang-en`: `#2F5D8C` · `--lang-hi`: `#B2541C` · `--lang-kn`: `#4F7A2E`
+- `--lang-ta`: `#A32A3C` · `--lang-te`: `#3D46A8` · `--lang-ml`: `#A02472`
 
 ### Semantic Tokens (WCAG AA Compliant)
-- **On-Device / Healthy**: Emerald (`#10B981`, soft: `rgba(16, 185, 129, 0.12)`, text: `#065F46` / `#34D399`)
-- **Warning / SHORT / Low Utterance**: Amber (`#F59E0B`, soft: `rgba(245, 158, 11, 0.12)`, text: `#92400E` / `#FBBF24`)
-- **Destructive (Delete only)**: Rose/Red (`#EF4444`, soft: `rgba(239, 68, 68, 0.12)`, text: `#991B1B` / `#F87171`)
-- **Experimental Protocol**: Purple (`#8B5CF6`, soft: `rgba(139, 92, 246, 0.12)`, text: `#5B21B6` / `#C4B5FD`)
+- **On-Device / Healthy**: mint (`--chrome-accent` `#2BC0AC`, soft `--chrome-accent-soft`, text `--chrome-accent-text` `#6FE0CE`) — used only for the on-device signal, never as a generic "active" colour.
+- **Warning / SHORT / Low Utterance**: amber (`--warn` `#A66100`/`#F0CE85` dark, soft `--warn-soft`, text `--warn-text`)
+- **Destructive (Delete only)**: Rose/Red (`--danger` `#DC2626`/`#EF4444` dark, soft `--danger-soft`, text `--danger-text`)
+- **Experimental Protocol**: Indigo (`--experimental` `#4A3E9C`/`#9A8CFF` dark, soft `--experimental-soft`, text `--experimental-text`)
+
+Generic "active" UI state (e.g. the samples filter chip, the "All" pill) uses
+`--text`/`--surface` (a dark-neutral fill), not the mint accent — Palette B
+reserves mint strictly for on-device/local signalling.
 
 ---
 

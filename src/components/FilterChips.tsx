@@ -4,6 +4,8 @@ export interface FilterChipOption {
   id: string;
   label: string;
   count?: number;
+  /** Dot colour (CSS colour value) shown before the label, e.g. a language rail. */
+  dotColor?: string;
 }
 
 interface FilterChipsProps {
@@ -23,24 +25,27 @@ export function FilterChips({ options, activeId, onChange }: FilterChipsProps) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.id)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-              active
-                ? "bg-teal-600 text-white shadow-sm dark:bg-teal-500"
-                : "border border-slate-200 bg-surface text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            }`}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all border"
             style={{
-              background: active ? "var(--accent)" : undefined,
-              color: active ? "#ffffff" : undefined,
+              background: active ? "var(--chrome-2)" : "var(--surface)",
+              color: active ? "#FFFFFF" : "var(--text-muted)",
+              borderColor: active ? "var(--chrome-2)" : "var(--border)",
             }}
           >
+            {opt.dotColor && (
+              <span
+                className="h-[7px] w-[7px] shrink-0 rounded-[2px]"
+                style={{ background: opt.dotColor }}
+              />
+            )}
             <span>{opt.label}</span>
             {typeof opt.count === "number" && (
               <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-semibold ${
-                  active
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                }`}
+                className="rounded-full px-1.5 py-0.2 text-[10px] font-semibold"
+                style={{
+                  background: active ? "rgba(255,255,255,0.18)" : "var(--surface-2)",
+                  color: active ? "#FFFFFF" : "var(--text-muted)",
+                }}
               >
                 {opt.count}
               </span>

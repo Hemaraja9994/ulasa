@@ -1,19 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useActiveSample, useHydrated, useStore } from "@/store/useStore";
-import { emptyScores, RUBRICS, rubricFor, scoreRubric, type RubricId } from "@/core/rubrics";
+import { RUBRICS, emptyScores, rubricFor, scoreRubric, type RubricId } from "@/core/rubrics";
+import { RubricSheet } from "@/components/RubricSheet";
+import { EmptyState } from "@/components/EmptyState";
 
-export default function Rubrics() {
+/**
+ * Rubrics — a scoring sheet, not a blog.
+ *
+ * The sheet that matches the sample's own elicitation context leads; the
+ * other two stay reachable in the switcher and are shown, unscored, in the
+ * side panel with a plain reason rather than being hidden.
+ */
+export default function RubricsPage() {
   const sample = useActiveSample();
   const hydrated = useHydrated();
-  const stored = useStore((s) => (sample ? s.rubrics[sample.id] : undefined));
+  const rubrics = useStore((s) => s.rubrics);
   const setRubric = useStore((s) => s.setRubric);
 
-  const [rubricId, setRubricId] = useState<RubricId>(
-    stored?.rubricId ?? (sample ? rubricFor(sample.elicitationContext) : "narrative"),
-  );
+  const suggested = sample ? rubricFor(sample.elicitationContext) : "narrative";
+  const [rubricId, setRubricId] = useState<RubricId>(suggested);
+
+  useEffect(() => {
+    if (sample) setRubricId(rubricFor(sample.elicitationContext));
+  }, [sample?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!hydrated) {
     return (
@@ -25,121 +37,101 @@ export default function Rubrics() {
 
   if (!sample) {
     return (
-      <div className="card p-8 text-center">
-        <h1 className="text-lg font-semibold">No sample selected</h1>
-        <Link href="/" className="btn btn-primary mt-4 no-underline">Go to the dashboard</Link>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em]">Rubrics</h1>
+        <EmptyState
+          art="shield"
+          heading="No sample is open"
+          body="Rubric scores are saved against a sample. Open one from the Workbench first."
+          action={
+            <Link href="/" className="btn btn-primary no-underline">
+              Go to the Workbench
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   const rubric = RUBRICS[rubricId];
-  const scores = stored?.rubricId === rubricId ? stored : emptyScores(rubricId);
-  const result = scoreRubric(rubric, scores);
+  const scores = rubrics[sample.id]?.rubricId === rubricId ? rubrics[sample.id] : emptyScores(rubricId);
+  const others = (Object.keys(RUBRICS) as RubricId[]).filter((id) => id !== rubricId);
 
-  function setScore(key: string, value: number | null) {
-    setRubric(sample!.id, { ...scores, scores: { ...scores.scores, [key]: value } });
+  function commit(next: typeof scores) {
+    setRubric(sample!.id, next);
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Macrostructure rubrics</h1>
+          <h1 className="text-2xl font-semibold tracking-[-0.02em]" style={{ color: "var(--text)" }}>
+            Rubrics
+          </h1>
           <p className="mt-0.5 text-sm" style={{ color: "var(--text-muted)" }}>
-            {sample.title}
+            {rubric.description}
           </p>
         </div>
-        <select
-          className="select"
-          style={{ width: "auto" }}
-          value={rubricId}
-          onChange={(e) => setRubricId(e.target.value as RubricId)}
-        >
-          {Object.values(RUBRICS).map((r) => (
-            <option key={r.id} value={r.id}>{r.label}</option>
+        <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-2)" }} role="group" aria-label="Rubric sheet">
+          {(Object.values(RUBRICS)).map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              aria-pressed={rubricId === r.id}
+              onClick={() => setRubricId(r.id)}
+              className="min-h-11 rounded-md px-3 text-sm md:min-h-0 md:py-1"
+              style={{
+                fontWeight: rubricId === r.id ? 600 : 450,
+                background: rubricId === r.id ? "var(--surface)" : "transparent",
+                color: rubricId === r.id ? "var(--text)" : "var(--text-muted)",
+              }}
+            >
+              {r.label.replace(" scoring", "")}
+              {r.id === suggested && <span style={{ color: "var(--accent)" }}> ·</span>}
+            </button>
           ))}
-        </select>
-      </div>
-
-      <div className="notice notice-info">
-        These dimensions are scored by you, not by the software. Narrative macrostructure cannot be
-        extracted reliably from surface text in any of the six languages ULASA supports, and a
-        confident automatic score here would be the easiest way to produce a wrong one. Read the
-        whole sample first, then score.
-      </div>
-
-      <p className="text-sm" style={{ color: "var(--text-muted)" }}>{rubric.description}</p>
-
-      <div className="card p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-sm font-semibold">Composite</span>
-          <span className="text-lg font-semibold tabular-nums">
-            {result.composite === null ? "not scored" : `${result.composite} / ${result.maximum}`}
-          </span>
         </div>
-        <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
-          {result.scored} of {result.total} dimensions scored
-          {result.mean !== null && ` · mean ${result.mean.toFixed(1)} of 5`}
-          {result.scored > 0 && result.scored < result.total &&
-            " · a partial composite is not comparable to a fully scored one; use the mean instead"}
-        </p>
       </div>
 
-      <div className="space-y-3">
-        {rubric.dimensions.map((dimension) => {
-          const value = scores.scores[dimension.key];
-          return (
-            <section key={dimension.key} className="card p-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-sm font-semibold">{dimension.label}</h2>
-                <div className="flex items-center gap-1">
-                  {[0, 1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      className="btn"
-                      style={{
-                        padding: "0.15rem 0.55rem",
-                        fontSize: "0.82rem",
-                        background: value === n ? "var(--accent)" : undefined,
-                        borderColor: value === n ? "var(--accent)" : undefined,
-                        color: value === n ? "#fff" : undefined,
-                      }}
-                      onClick={() => setScore(dimension.key, value === n ? null : n)}
-                      aria-pressed={value === n}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p className="mt-1.5 text-sm" style={{ color: "var(--text-muted)" }}>{dimension.prompt}</p>
-              <dl className="mt-2 grid gap-1 text-xs sm:grid-cols-2" style={{ color: "var(--text-muted)" }}>
-                {([0, 1, 3, 5] as const).map((anchor) => (
-                  <div key={anchor}>
-                    <dt className="inline font-semibold">{anchor}: </dt>
-                    <dd className="inline">{dimension.anchors[anchor]}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          );
-        })}
-      </div>
-
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">Notes on macrostructure</span>
-        <textarea
-          className="textarea"
-          style={{ minHeight: "7rem" }}
-          value={scores.notes}
-          onChange={(e) => setRubric(sample.id, { ...scores, notes: e.target.value })}
-          placeholder="What the scores above do not capture — cultural narrative conventions, the child's engagement with the task, anything you would say to a colleague."
+      <div className="grid items-start gap-3.5 lg:grid-cols-[1fr_300px]">
+        <RubricSheet
+          rubric={rubric}
+          scores={scores}
+          onScore={(key, value) => commit({ ...scores, scores: { ...scores.scores, [key]: value } })}
+          onNotes={(notes) => commit({ ...scores, notes })}
         />
-      </label>
 
-      <div className="flex gap-2">
-        <Link href="/analyse" className="btn no-underline">Back to measures</Link>
-        <Link href="/report" className="btn btn-primary no-underline">Draft the report</Link>
+        <div className="flex flex-col gap-3.5">
+          {others.map((id) => {
+            const other = RUBRICS[id];
+            const otherScores = rubrics[sample.id]?.rubricId === id ? rubrics[sample.id] : emptyScores(id);
+            const otherResult = scoreRubric(other, otherScores);
+            return (
+              <div key={id} className="card p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13.5px] font-semibold" style={{ color: "var(--text)" }}>
+                    {other.label}
+                  </span>
+                  <span className="num text-[12.5px]" style={{ color: "var(--text-faint)" }}>
+                    {otherResult.composite ?? "—"} / {otherResult.maximum}
+                  </span>
+                </div>
+                <ul className="space-y-1 text-[12.5px]" style={{ color: "var(--text-faint)" }}>
+                  {other.dimensions.map((d) => (
+                    <li key={d.key} className="flex justify-between gap-2">
+                      <span className="truncate">{d.label}</span>
+                      <span className="num shrink-0">— / 5</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11.5px] leading-snug" style={{ color: "var(--text-faint)" }}>
+                  Not scored — the rubric follows the elicitation context, and this sample is{" "}
+                  {sample.elicitationContext.replace(/_/g, " ")}.
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

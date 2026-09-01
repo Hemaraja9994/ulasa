@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+/*
+ * ULASA visual system.
+ *
+ * Calm clinical: low-chroma surfaces, one accent, generous line height, 15px
+ * base body text (the brief asks for 14px+; clinicians read these screens for
+ * long stretches). All colour pairs meet WCAG 2.2 AA at body size.
+ */
+
+:root {
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --surface-2: #f4f5f4;
+  --border: #e2e4e2;
+  --border-strong: #c9ccc9;
+  --text: #1b1f1d;
+  --text-muted: #5d6461;
+  --accent: #1f6f5c;
+  --accent-soft: #e8f2ef;
+  --accent-text: #14503f;
+  --warn: #8a5a10;
+  --warn-soft: #fdf4e3;
+  --warn-border: #e6cf9f;
+  --danger: #9a2f2f;
+  --danger-soft: #fbeeee;
+  --experimental: #6b4d8f;
+  --experimental-soft: #f2edf8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171a;
+    --surface: #1b1f23;
+    --surface-2: #21262b;
+    --border: #2e343a;
+    --border-strong: #444c53;
+    --text: #e8ecea;
+    --text-muted: #9aa4a0;
+    --accent: #5fbfa3;
+    --accent-soft: #17302a;
+    --accent-text: #8fd8c1;
+    --warn: #e0b467;
+    --warn-soft: #2c2415;
+    --warn-border: #5a4a24;
+    --danger: #e08585;
+    --danger-soft: #2e1b1b;
+    --experimental: #b79ee0;
+    --experimental-soft: #251d33;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #14171a;
+  --surface: #1b1f23;
+  --surface-2: #21262b;
+  --border: #2e343a;
+  --border-strong: #444c53;
+  --text: #e8ecea;
+  --text-muted: #9aa4a0;
+  --accent: #5fbfa3;
+  --accent-soft: #17302a;
+  --accent-text: #8fd8c1;
+  --warn: #e0b467;
+  --warn-soft: #2c2415;
+  --warn-border: #5a4a24;
+  --danger: #e08585;
+  --danger-soft: #2e1b1b;
+  --experimental: #b79ee0;
+  --experimental-soft: #251d33;
+}
+
+/*
+ * Indic script coverage. Every one of the six supported languages needs a font
+ * that shapes its script correctly — conjuncts in Devanagari, the Tamil
+ * grantha letters, Kannada/Telugu vowel signs, Malayalam's chillu characters.
+ * The Noto family is bundled by most systems; the stack falls through to it.
+ */
+html {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", "Noto Sans Kannada",
+    "Noto Sans Telugu", "Noto Sans Malayalam", "Nirmala UI", sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Indic text needs more leading than Latin at the same size. */
+.indic {
+  line-height: 1.9;
+}
+
+.mono {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+}
+
+/* --- primitives ---------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 7px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+
+.input, .select, .textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.badge-experimental {
+  background: var(--experimental-soft);
+  color: var(--experimental);
+  border-color: var(--experimental);
+}
+.badge-unavailable {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+.badge-local {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.notice {
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.88rem;
+  border: 1px solid;
+}
+.notice-warn {
+  background: var(--warn-soft);
+  border-color: var(--warn-border);
+  color: var(--warn);
+}
+.notice-info {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* --- focus and accessibility --------------------------------------------- */
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --- print --------------------------------------------------------------- */
+
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --border: #cccccc;
+    --text: #000000;
+    --text-muted: #444444;
+  }
+  .no-print { display: none !important; }
+  body { font-size: 11pt; }
+  .card { border: 1px solid #ccc; break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; }
+  table { break-inside: auto; }
+  tr { break-inside: avoid; }
+  @page { margin: 16mm; }
+}

@@ -3,20 +3,21 @@
 /*
  * ULASA visual system — "Graphite and Mint" (Palette B).
  *
- * Graphite chrome (a fixed dark nav/table-header pair that does not swap with
- * the theme toggle), a cool near-white workspace, and one saturated mint
- * reserved for the on-device signal. Six higher-chroma language-rail colours
- * identify a sample's language everywhere it appears: the samples table's
- * left border, the language badge, and a demonstration card's top border.
- * All colour pairs meet WCAG 2.2 AA at body size. Generous line height; 15px
- * base body text — the brief asks for 14px+, and clinicians read these
- * screens for long stretches.
+ * Graphite chrome (a fixed dark nav bar and dark table headers that do not
+ * swap with the theme toggle), a cool near-white workspace, and one saturated
+ * mint reserved for the on-device signal. Six language-rail colours identify a
+ * sample's pack everywhere it appears: a 3px left rail on rows, a 3px top rail
+ * on cards, and the badge fill. Deliberately none of them teal, so a rail can
+ * never be mistaken for the on-device signal.
+ *
+ * All colour pairs meet WCAG 2.2 AA at body size. 15px base body text — the
+ * brief asks for 14px+, and clinicians read these screens for long stretches.
  */
 
 :root {
   --bg: #EFF1F3;
   --surface: #FFFFFF;
-  --surface-2: #EAEEF2;
+  --surface-2: #F7F8FA;
   --border: #D8DDE3;
   --border-strong: #C3CBD4;
   --text: #0D1116;
@@ -25,106 +26,125 @@
   --accent: #00736B;
   --accent-hover: #005952;
   --accent-soft: #E4F7F3;
+  --accent-border: #8FD9CC;
   --accent-text: #004F49;
+  --signal: #2BC0AC;
   --warn: #A66100;
   --warn-soft: #FFF4D9;
   --warn-border: #F0CE85;
   --warn-text: #8A5200;
-  --danger: #DC2626;
-  --danger-soft: #FEE2E2;
-  --danger-text: #991B1B;
+  --danger: #BE2C2C;
+  --danger-soft: #FDECEA;
+  --danger-text: #8E1F1F;
   --experimental: #4A3E9C;
   --experimental-soft: #E9E7FA;
   --experimental-text: #4A3E9C;
-  --context-chip-text: #37485A;
+  --paper: #FAF9F6;
+  --paper-rule: #EFEEE9;
+  --desk: #E7EAED;
+  --row-hover: #F7F8FA;
+  --row-rule: #EDF0F3;
+  --chip-neutral: #EAEEF2;
+  --chip-neutral-text: #37485A;
 
-  /* Graphite chrome: fixed dark nav / table-header pair, both themes. */
-  --chrome-bg: #141A20;
-  --chrome-text: #F4F7F9;
-  --chrome-text-muted: #94A3B0;
-  --chrome-border: #232B33;
-  --chrome-accent: #2BC0AC;
-  --chrome-accent-soft: rgba(43, 192, 172, 0.16);
-  --chrome-accent-text: #6FE0CE;
-  --table-header-bg: #1F2830;
-  --table-header-text: #A8B4C0;
+  /* Graphite chrome. Fixed in both themes: the nav bar and table headers are
+     the instrument's frame, not a themed surface. */
+  --chrome: #141A20;
+  --chrome-2: #1F2830;
+  --chrome-ink: #F4F7F9;
+  --chrome-muted: #94A3B0;
+  --chrome-label: #A8B4C0;
 
-  /* Language rails: EN HI KN TA TE ML. Higher chroma so they read on both the
-     light workspace and the dark chrome. */
+  /* Language pack rails. */
   --lang-en: #2F5D8C;
   --lang-hi: #B2541C;
   --lang-kn: #4F7A2E;
   --lang-ta: #A32A3C;
   --lang-te: #3D46A8;
   --lang-ml: #A02472;
+
+  /* Indic script size in the Studio editor. Settings offers 17 / 19 / 21px;
+     nothing smaller is offered. */
+  --indic-size: 19px;
 }
 
 /*
- * "system" (the default) means: dark only when the OS actually prefers dark.
- * Previously this block matched unconditionally whenever data-theme wasn't
- * "light" (i.e. also whenever it was unset), so "system" always rendered
- * dark regardless of OS preference — the opposite of the brief's "Light
- * default, dark available." An explicit data-theme="dark" (set in Settings)
- * still always wins, media query or not.
+ * Dark, derived from the same ramp. "System" resolves through
+ * prefers-color-scheme; an explicit data-theme="dark" always wins.
+ * --paper stays light in both themes — a case file is not dark.
  */
 :root[data-theme="dark"] {
-  --bg: #0B0F14;
-  --surface: #141A20;
-  --surface-2: #1C242C;
-  --border: #232B33;
-  --border-strong: #34404A;
-  --text: #F4F7F9;
-  --text-muted: #94A3B0;
-  --text-faint: #7A8794;
+  --bg: #0C1114;
+  --surface: #131A1E;
+  --surface-2: #182126;
+  --border: #232E34;
+  --border-strong: #33424A;
+  --text: #E7EDEF;
+  --text-muted: #93A1A8;
+  --text-faint: #7C8A91;
   --accent: #2BC0AC;
-  --accent-hover: #6FE0CE;
-  --accent-soft: rgba(43, 192, 172, 0.16);
-  --accent-text: #6FE0CE;
-  --warn: #F0CE85;
-  --warn-soft: rgba(240, 206, 133, 0.14);
-  --warn-border: rgba(240, 206, 133, 0.35);
-  --warn-text: #F0CE85;
-  --danger: #EF4444;
-  --danger-soft: rgba(239, 68, 68, 0.15);
-  --danger-text: #F87171;
-  --experimental: #9A8CFF;
-  --experimental-soft: rgba(154, 140, 255, 0.16);
-  --experimental-text: #C9C1FF;
-  --context-chip-text: #B7C3D1;
+  --accent-hover: #7FEEDD;
+  --accent-soft: rgba(43, 192, 172, 0.14);
+  --accent-border: rgba(43, 192, 172, 0.45);
+  --accent-text: #7FEEDD;
+  --warn: #FBBF24;
+  --warn-soft: rgba(245, 158, 11, 0.16);
+  --warn-border: rgba(245, 158, 11, 0.4);
+  --warn-text: #FBBF24;
+  --danger: #E86A6A;
+  --danger-soft: rgba(232, 106, 106, 0.18);
+  --danger-text: #E86A6A;
+  --experimental: #C4B5FD;
+  --experimental-soft: rgba(167, 139, 250, 0.16);
+  --experimental-text: #C4B5FD;
+  --chrome: #0F1518;
+  --chrome-2: #1C262B;
+  --row-hover: #182126;
+  --row-rule: #232E34;
+  --chip-neutral: #1C262B;
+  --chip-neutral-text: #B7C3D1;
+  --desk: #0C1114;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0B0F14;
-    --surface: #141A20;
-    --surface-2: #1C242C;
-    --border: #232B33;
-    --border-strong: #34404A;
-    --text: #F4F7F9;
-    --text-muted: #94A3B0;
-    --text-faint: #7A8794;
+    --bg: #0C1114;
+    --surface: #131A1E;
+    --surface-2: #182126;
+    --border: #232E34;
+    --border-strong: #33424A;
+    --text: #E7EDEF;
+    --text-muted: #93A1A8;
+    --text-faint: #7C8A91;
     --accent: #2BC0AC;
-    --accent-hover: #6FE0CE;
-    --accent-soft: rgba(43, 192, 172, 0.16);
-    --accent-text: #6FE0CE;
-    --warn: #F0CE85;
-    --warn-soft: rgba(240, 206, 133, 0.14);
-    --warn-border: rgba(240, 206, 133, 0.35);
-    --warn-text: #F0CE85;
-    --danger: #EF4444;
-    --danger-soft: rgba(239, 68, 68, 0.15);
-    --danger-text: #F87171;
-    --experimental: #9A8CFF;
-    --experimental-soft: rgba(154, 140, 255, 0.16);
-    --experimental-text: #C9C1FF;
-    --context-chip-text: #B7C3D1;
+    --accent-hover: #7FEEDD;
+    --accent-soft: rgba(43, 192, 172, 0.14);
+    --accent-border: rgba(43, 192, 172, 0.45);
+    --accent-text: #7FEEDD;
+    --warn: #FBBF24;
+    --warn-soft: rgba(245, 158, 11, 0.16);
+    --warn-border: rgba(245, 158, 11, 0.4);
+    --warn-text: #FBBF24;
+    --danger: #E86A6A;
+    --danger-soft: rgba(232, 106, 106, 0.18);
+    --danger-text: #E86A6A;
+    --experimental: #C4B5FD;
+    --experimental-soft: rgba(167, 139, 250, 0.16);
+    --experimental-text: #C4B5FD;
+    --chrome: #0F1518;
+    --chrome-2: #1C262B;
+    --row-hover: #182126;
+    --row-rule: #232E34;
+    --chip-neutral: #1C262B;
+    --chip-neutral-text: #B7C3D1;
+    --desk: #0C1114;
   }
 }
 
 :root[data-theme="light"] {
   --bg: #EFF1F3;
   --surface: #FFFFFF;
-  --surface-2: #EAEEF2;
+  --surface-2: #F7F8FA;
   --border: #D8DDE3;
   --border-strong: #C3CBD4;
   --text: #0D1116;
@@ -133,18 +153,25 @@
   --accent: #00736B;
   --accent-hover: #005952;
   --accent-soft: #E4F7F3;
+  --accent-border: #8FD9CC;
   --accent-text: #004F49;
   --warn: #A66100;
   --warn-soft: #FFF4D9;
   --warn-border: #F0CE85;
   --warn-text: #8A5200;
-  --danger: #DC2626;
-  --danger-soft: #FEE2E2;
-  --danger-text: #991B1B;
+  --danger: #BE2C2C;
+  --danger-soft: #FDECEA;
+  --danger-text: #8E1F1F;
   --experimental: #4A3E9C;
   --experimental-soft: #E9E7FA;
   --experimental-text: #4A3E9C;
-  --context-chip-text: #37485A;
+  --chrome: #141A20;
+  --chrome-2: #1F2830;
+  --row-hover: #F7F8FA;
+  --row-rule: #EDF0F3;
+  --chip-neutral: #EAEEF2;
+  --chip-neutral-text: #37485A;
+  --desk: #E7EAED;
 }
 
 /*
@@ -169,13 +196,39 @@ body {
   min-height: 100vh;
 }
 
-/* Indic text needs more leading than Latin at the same size. */
+/*
+ * Indic text needs more leading than Latin at the same size, and a 17px floor:
+ * at 15px the Kannada and Malayalam matras sit below comfortable legibility.
+ */
 .indic {
+  font-size: max(17px, 1em);
   line-height: 1.85;
 }
 
+/* The Studio editor raises the floor to --indic-size (17 / 19 / 21, default
+   19). Matra and conjunct decisions are the clinical judgement being made. */
+.indic-editor {
+  font-size: var(--indic-size);
+  line-height: 1.9;
+}
+
 .mono {
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-family: var(--font-plex-mono), ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+}
+
+/* Every number in a table or metric tile. Tabular figures are what make a
+   column of measures scannable vertically. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Metadata label: 11px / 600 / .08em / uppercase, --text-faint. */
+.meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 /* --- primitives ---------------------------------------------------------- */
@@ -185,11 +238,16 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(13, 17, 22, 0.06);
 }
 
 .card:hover {
-  border-color: var(--border-strong);
+  border-color: var(--chrome-label);
+}
+
+/* Elevation has exactly two levels: cards, and modals/menus. */
+.elevated {
+  box-shadow: 0 10px 26px rgba(13, 17, 22, 0.14);
 }
 
 .btn {
@@ -295,6 +353,29 @@ body {
   border-color: var(--warn-border);
 }
 
+/* Elicitation context and other neutral descriptors. One flat treatment for
+   every value — the context is a label, not a status. */
+.chip-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  background: var(--chip-neutral);
+  color: var(--chip-neutral-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Row separators and hover. No lift on table rows — background only. */
+.row-rule + .row-rule {
+  border-top: 1px solid var(--row-rule);
+}
+
+.row-hover:hover {
+  background: var(--row-hover);
+}
+
 .notice {
   border-radius: 10px;
   padding: 0.75rem 1rem;
@@ -331,6 +412,10 @@ body {
     --border: #cccccc;
     --text: #000000;
     --text-muted: #444444;
+    /* The report sheet prints as plain white paper on no backdrop. */
+    --paper: #ffffff;
+    --paper-rule: #e6e4df;
+    --desk: #ffffff;
   }
   .no-print { display: none !important; }
   body { font-size: 11pt; }
@@ -338,5 +423,13 @@ body {
   h1, h2, h3 { break-after: avoid; }
   table { break-inside: auto; }
   tr { break-inside: avoid; }
+  /* The A4 sheet is already the page; drop its own frame and shadow. */
+  .print-sheet {
+    width: auto !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .print-row { break-inside: avoid; }
   @page { margin: 16mm; }
 }

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="ULASA">
+  <title>ULASA</title>
+  <rect width="48" height="48" rx="10" fill="#2BC0AC"/>
+  <path d="M14 13h-4v22h4M34 13h4v22h-4" stroke="#0B1215" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 19h12M18 29h8" stroke="#0B1215" stroke-width="3.6" stroke-linecap="round"/>
+</svg>

@@ -27,15 +27,15 @@ export function FilterChips({ options, activeId, onChange }: FilterChipsProps) {
             onClick={() => onChange(opt.id)}
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all border"
             style={{
-              background: active ? "var(--text)" : "var(--surface)",
-              color: active ? "var(--surface)" : "var(--text-muted)",
-              borderColor: active ? "var(--text)" : "var(--border)",
+              background: active ? "var(--chrome-2)" : "var(--surface)",
+              color: active ? "#FFFFFF" : "var(--text-muted)",
+              borderColor: active ? "var(--chrome-2)" : "var(--border)",
             }}
           >
             {opt.dotColor && (
               <span
-                className="h-1.5 w-1.5 rounded-sm shrink-0"
-                style={{ background: active ? "var(--surface)" : opt.dotColor }}
+                className="h-[7px] w-[7px] shrink-0 rounded-[2px]"
+                style={{ background: opt.dotColor }}
               />
             )}
             <span>{opt.label}</span>
@@ -43,8 +43,8 @@ export function FilterChips({ options, activeId, onChange }: FilterChipsProps) {
               <span
                 className="rounded-full px-1.5 py-0.2 text-[10px] font-semibold"
                 style={{
-                  background: active ? "rgba(255,255,255,0.2)" : "var(--surface-2)",
-                  color: active ? "var(--surface)" : "var(--text-muted)",
+                  background: active ? "rgba(255,255,255,0.18)" : "var(--surface-2)",
+                  color: active ? "#FFFFFF" : "var(--text-muted)",
                 }}
               >
                 {opt.count}

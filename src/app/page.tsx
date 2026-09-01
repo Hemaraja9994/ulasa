@@ -88,22 +88,52 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight">Language sample analysis</h1>
-        <p className="mt-1.5 max-w-3xl" style={{ color: "var(--text-muted)" }}>
-          Transcribe a sample, score it, and produce a report — for English, Hindi, Kannada, Tamil,
-          Telugu and Malayalam. Everything runs in this browser. There is no account, no upload, and
-          no licence fee.
-        </p>
+      {/* --- Upfront Hero Section -------------------------------------------- */}
+      <section className="relative overflow-hidden rounded-2xl border border-red-950/60 bg-gradient-to-b from-[#161720] to-[#0d0e13] p-6 md:p-8 shadow-2xl shadow-black/80">
+        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-red-600/10 blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-red-800/40 bg-red-950/40 px-3 py-1 text-xs font-semibold text-red-400 backdrop-blur">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+            Universal Language Assessment & Sample Analysis
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white">
+            Clinician-Grade <span className="bg-gradient-to-r from-red-400 via-red-500 to-rose-400 bg-clip-text text-transparent">Language Analysis</span>
+          </h1>
+          <p className="text-sm md:text-base leading-relaxed text-gray-300">
+            Transcribe, score, and generate comprehensive clinical reports with first-class Indic morphosyntax. 
+            Runs 100% locally in your browser with zero latency, complete patient privacy, and no licence fees.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {[
+              { code: "EN", name: "English (India)" },
+              { code: "HI", name: "हिन्दी Hindi" },
+              { code: "KN", name: "ಕನ್ನಡ Kannada" },
+              { code: "TA", name: "தமிழ் Tamil" },
+              { code: "TE", name: "తెలుగు Telugu" },
+              { code: "ML", name: "മലയാളം Malayalam" },
+            ].map((lang) => (
+              <span 
+                key={lang.code}
+                className="inline-flex items-center gap-1.5 rounded-md border border-neutral-800 bg-neutral-900/80 px-2.5 py-1 text-xs font-medium text-neutral-300 shadow-sm"
+              >
+                <span className="font-mono text-[10px] font-bold text-red-400">{lang.code}</span>
+                <span>{lang.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* --- New sample ----------------------------------------------------- */}
-      <section className="card p-5">
-        <h2 className="text-base font-semibold">Start a sample</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="card card-glow p-5 md:p-6 border-red-950/50">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-3 w-1 rounded bg-red-500"></div>
+          <h2 className="text-base font-bold tracking-tight text-white">Start New Sample</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              Title
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400">
+              Sample Title
             </span>
             <input
               className="input"
@@ -114,11 +144,11 @@ export default function Dashboard() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400">
               Language
             </span>
             <select
-              className="select"
+              className="select font-medium"
               value={language}
               onChange={(e) => setLanguage(e.target.value as Bcp47)}
             >
@@ -131,11 +161,11 @@ export default function Dashboard() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400">
               Elicitation context
             </span>
             <select
-              className="select"
+              className="select font-medium"
               value={context}
               onChange={(e) => setContext(e.target.value as ElicitationContext)}
             >
@@ -152,11 +182,11 @@ export default function Dashboard() {
           </label>
 
           <div className="flex items-end gap-2">
-            <button className="btn btn-primary" onClick={createBlank}>
-              Create
+            <button className="btn btn-primary flex-1 justify-center py-2 text-sm" onClick={createBlank}>
+              Create Sample
             </button>
-            <button className="btn" onClick={() => fileRef.current?.click()}>
-              Import file
+            <button className="btn py-2 text-sm" onClick={() => fileRef.current?.click()} title="Import SALT, CHAT, or ULASA JSON">
+              Import
             </button>
             <input
               ref={fileRef}
@@ -172,7 +202,7 @@ export default function Dashboard() {
           </div>
         </div>
         <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          Import accepts SALT-style text (.txt), CHAT (.cha), and ULASA JSON.
+          Supported import formats: SALT-style text (.txt), CHAT (.cha), and ULASA JSON.
         </p>
       </section>
 
@@ -266,26 +296,34 @@ export default function Dashboard() {
 
       {/* --- Fixtures -------------------------------------------------------- */}
       <section>
-        <h2 className="mb-1 text-base font-semibold">Demonstration samples</h2>
-        <p className="mb-3 text-sm" style={{ color: "var(--text-muted)" }}>
-          Original transcripts written for ULASA. No real child&apos;s speech, and nothing drawn from
-          a copyrighted corpus or stimulus set.
+        <div className="flex items-center gap-2 mb-1">
+          <div className="h-3 w-1 rounded bg-red-500"></div>
+          <h2 className="text-base font-bold tracking-tight text-white">Demonstration Samples</h2>
+        </div>
+        <p className="mb-4 text-sm text-neutral-400">
+          Original transcripts written specifically for ULASA. Contains no copyrighted materials or real child recordings.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {FIXTURES.map((fixture) => (
             <button
               key={fixture.id}
-              className="card p-4 text-left"
+              className="group card p-4 text-left transition-all hover:border-red-500/50 hover:bg-neutral-900/90 hover:shadow-lg hover:shadow-red-950/40"
               onClick={() => loadFixture(fixture.id)}
               style={{ cursor: "pointer" }}
             >
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-medium">{fixture.label}</span>
-                <span className="badge badge-local">{fixture.language}</span>
+                <span className="font-semibold text-white group-hover:text-red-400 transition-colors">
+                  {fixture.label}
+                </span>
+                <span className="badge badge-local text-[10px] font-mono">{fixture.language}</span>
               </div>
-              <p className="mt-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <p className="mt-2 text-xs leading-relaxed text-neutral-400">
                 {fixture.description}
               </p>
+              <div className="mt-3 flex items-center gap-1 text-[11px] font-medium text-red-400 opacity-80 group-hover:opacity-100">
+                <span>Load transcript</span>
+                <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+              </div>
             </button>
           ))}
         </div>

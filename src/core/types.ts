@@ -141,6 +141,8 @@ export interface Sample {
   /** Seconds of usable recorded/observed time; required for rate measures. */
   elapsedSeconds?: number;
   recordedAt?: string;
+  /** Last time this sample's metadata or transcript changed, for the Workbench "Updated" column. */
+  updatedAt?: string;
   speakers: Speaker[];
   utterances: Utterance[];
   /** Free-text clinician note about sample validity. */

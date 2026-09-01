@@ -45,13 +45,10 @@ export function Dropzone({ onFiles }: DropzoneProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onClick={() => fileInputRef.current?.click()}
-      className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-all cursor-pointer text-center ${
-        isDragging
-          ? "border-teal-500 bg-teal-50/50 dark:bg-teal-950/20"
-          : "border-slate-300 dark:border-slate-700 hover:border-teal-500/70 hover:bg-slate-50 dark:hover:bg-slate-800/40"
-      }`}
+      className="group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-all cursor-pointer text-center"
       style={{
-        borderColor: isDragging ? "var(--accent)" : undefined,
+        borderColor: isDragging ? "var(--accent)" : "var(--border-strong)",
+        background: isDragging ? "var(--accent-soft)" : "var(--surface-2)",
       }}
     >
       <input
@@ -83,13 +80,22 @@ export function Dropzone({ onFiles }: DropzoneProps) {
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+        <span
+          className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-medium border"
+          style={{ color: "var(--text-muted)", background: "var(--surface)", borderColor: "var(--border)" }}
+        >
           .TXT (SALT)
         </span>
-        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+        <span
+          className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-medium border"
+          style={{ color: "var(--text-muted)", background: "var(--surface)", borderColor: "var(--border)" }}
+        >
           .CHA (CHAT)
         </span>
-        <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+        <span
+          className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-medium border"
+          style={{ color: "var(--text-muted)", background: "var(--surface)", borderColor: "var(--border)" }}
+        >
           .JSON (ULASA)
         </span>
       </div>

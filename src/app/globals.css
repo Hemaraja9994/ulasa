@@ -1,83 +1,150 @@
 @import "tailwindcss";
 
 /*
- * ULASA visual system.
+ * ULASA visual system — "Graphite and Mint" (Palette B).
  *
- * Calm clinical: low-chroma surfaces, one accent, generous line height, 15px
- * base body text (the brief asks for 14px+; clinicians read these screens for
- * long stretches). All colour pairs meet WCAG 2.2 AA at body size.
+ * Graphite chrome (a fixed dark nav/table-header pair that does not swap with
+ * the theme toggle), a cool near-white workspace, and one saturated mint
+ * reserved for the on-device signal. Six higher-chroma language-rail colours
+ * identify a sample's language everywhere it appears: the samples table's
+ * left border, the language badge, and a demonstration card's top border.
+ * All colour pairs meet WCAG 2.2 AA at body size. Generous line height; 15px
+ * base body text — the brief asks for 14px+, and clinicians read these
+ * screens for long stretches.
  */
 
 :root {
-  --bg: #F8FAFC;
+  --bg: #EFF1F3;
   --surface: #FFFFFF;
-  --surface-2: #F1F5F9;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --text: #0F172A;
-  --text-muted: #64748B;
-  --accent: #0D9488;
-  --accent-hover: #0F766E;
-  --accent-soft: #CCFBF1;
-  --accent-text: #115E59;
-  --warn: #D97706;
-  --warn-soft: #FEF3C7;
-  --warn-border: #FDE68A;
-  --warn-text: #92400E;
+  --surface-2: #EAEEF2;
+  --border: #D8DDE3;
+  --border-strong: #C3CBD4;
+  --text: #0D1116;
+  --text-muted: #56616D;
+  --text-faint: #7A8794;
+  --accent: #00736B;
+  --accent-hover: #005952;
+  --accent-soft: #E4F7F3;
+  --accent-text: #004F49;
+  --warn: #A66100;
+  --warn-soft: #FFF4D9;
+  --warn-border: #F0CE85;
+  --warn-text: #8A5200;
   --danger: #DC2626;
   --danger-soft: #FEE2E2;
   --danger-text: #991B1B;
-  --experimental: #7C3AED;
-  --experimental-soft: #F5F3FF;
-  --experimental-text: #5B21B6;
+  --experimental: #4A3E9C;
+  --experimental-soft: #E9E7FA;
+  --experimental-text: #4A3E9C;
+  --context-chip-text: #37485A;
+
+  /* Graphite chrome: fixed dark nav / table-header pair, both themes. */
+  --chrome-bg: #141A20;
+  --chrome-text: #F4F7F9;
+  --chrome-text-muted: #94A3B0;
+  --chrome-border: #232B33;
+  --chrome-accent: #2BC0AC;
+  --chrome-accent-soft: rgba(43, 192, 172, 0.16);
+  --chrome-accent-text: #6FE0CE;
+  --table-header-bg: #1F2830;
+  --table-header-text: #A8B4C0;
+
+  /* Language rails: EN HI KN TA TE ML. Higher chroma so they read on both the
+     light workspace and the dark chrome. */
+  --lang-en: #2F5D8C;
+  --lang-hi: #B2541C;
+  --lang-kn: #4F7A2E;
+  --lang-ta: #A32A3C;
+  --lang-te: #3D46A8;
+  --lang-ml: #A02472;
 }
 
-:root[data-theme="dark"], :root:not([data-theme="light"]) {
-  --bg: #0B0F17;
-  --surface: #131B2A;
-  --surface-2: #1E293B;
-  --border: #1E293B;
-  --border-strong: #334155;
-  --text: #F8FAFC;
-  --text-muted: #94A3B8;
-  --accent: #14B8A6;
-  --accent-hover: #2DD4BF;
-  --accent-soft: rgba(20, 184, 166, 0.15);
-  --accent-text: #5EEAD4;
-  --warn: #F59E0B;
-  --warn-soft: rgba(245, 158, 11, 0.15);
-  --warn-border: rgba(245, 158, 11, 0.35);
-  --warn-text: #FBBF24;
+/*
+ * "system" (the default) means: dark only when the OS actually prefers dark.
+ * Previously this block matched unconditionally whenever data-theme wasn't
+ * "light" (i.e. also whenever it was unset), so "system" always rendered
+ * dark regardless of OS preference — the opposite of the brief's "Light
+ * default, dark available." An explicit data-theme="dark" (set in Settings)
+ * still always wins, media query or not.
+ */
+:root[data-theme="dark"] {
+  --bg: #0B0F14;
+  --surface: #141A20;
+  --surface-2: #1C242C;
+  --border: #232B33;
+  --border-strong: #34404A;
+  --text: #F4F7F9;
+  --text-muted: #94A3B0;
+  --text-faint: #7A8794;
+  --accent: #2BC0AC;
+  --accent-hover: #6FE0CE;
+  --accent-soft: rgba(43, 192, 172, 0.16);
+  --accent-text: #6FE0CE;
+  --warn: #F0CE85;
+  --warn-soft: rgba(240, 206, 133, 0.14);
+  --warn-border: rgba(240, 206, 133, 0.35);
+  --warn-text: #F0CE85;
   --danger: #EF4444;
   --danger-soft: rgba(239, 68, 68, 0.15);
   --danger-text: #F87171;
-  --experimental: #A78BFA;
-  --experimental-soft: rgba(167, 139, 250, 0.15);
-  --experimental-text: #C4B5FD;
+  --experimental: #9A8CFF;
+  --experimental-soft: rgba(154, 140, 255, 0.16);
+  --experimental-text: #C9C1FF;
+  --context-chip-text: #B7C3D1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B0F14;
+    --surface: #141A20;
+    --surface-2: #1C242C;
+    --border: #232B33;
+    --border-strong: #34404A;
+    --text: #F4F7F9;
+    --text-muted: #94A3B0;
+    --text-faint: #7A8794;
+    --accent: #2BC0AC;
+    --accent-hover: #6FE0CE;
+    --accent-soft: rgba(43, 192, 172, 0.16);
+    --accent-text: #6FE0CE;
+    --warn: #F0CE85;
+    --warn-soft: rgba(240, 206, 133, 0.14);
+    --warn-border: rgba(240, 206, 133, 0.35);
+    --warn-text: #F0CE85;
+    --danger: #EF4444;
+    --danger-soft: rgba(239, 68, 68, 0.15);
+    --danger-text: #F87171;
+    --experimental: #9A8CFF;
+    --experimental-soft: rgba(154, 140, 255, 0.16);
+    --experimental-text: #C9C1FF;
+    --context-chip-text: #B7C3D1;
+  }
 }
 
 :root[data-theme="light"] {
-  --bg: #F8FAFC;
+  --bg: #EFF1F3;
   --surface: #FFFFFF;
-  --surface-2: #F1F5F9;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --text: #0F172A;
-  --text-muted: #64748B;
-  --accent: #0D9488;
-  --accent-hover: #0F766E;
-  --accent-soft: #CCFBF1;
-  --accent-text: #115E59;
-  --warn: #D97706;
-  --warn-soft: #FEF3C7;
-  --warn-border: #FDE68A;
-  --warn-text: #92400E;
+  --surface-2: #EAEEF2;
+  --border: #D8DDE3;
+  --border-strong: #C3CBD4;
+  --text: #0D1116;
+  --text-muted: #56616D;
+  --text-faint: #7A8794;
+  --accent: #00736B;
+  --accent-hover: #005952;
+  --accent-soft: #E4F7F3;
+  --accent-text: #004F49;
+  --warn: #A66100;
+  --warn-soft: #FFF4D9;
+  --warn-border: #F0CE85;
+  --warn-text: #8A5200;
   --danger: #DC2626;
   --danger-soft: #FEE2E2;
   --danger-text: #991B1B;
-  --experimental: #7C3AED;
-  --experimental-soft: #F5F3FF;
-  --experimental-text: #5B21B6;
+  --experimental: #4A3E9C;
+  --experimental-soft: #E9E7FA;
+  --experimental-text: #4A3E9C;
+  --context-chip-text: #37485A;
 }
 
 /*

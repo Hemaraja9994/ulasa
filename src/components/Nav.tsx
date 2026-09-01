@@ -21,41 +21,41 @@ export function Nav() {
   return (
     <header
       className="no-print sticky top-0 z-30 border-b backdrop-blur-md"
-      style={{ 
-        borderColor: "var(--border)", 
-        background: "color-mix(in srgb, var(--surface) 88%, transparent)" 
+      style={{
+        borderColor: "var(--chrome-border)",
+        background: "color-mix(in srgb, var(--chrome-bg) 94%, transparent)",
       }}
     >
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 md:px-6">
         {/* Brand & Desktop Links */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 no-underline group">
-            <div 
-              className="flex h-8 w-8 items-center justify-center rounded-lg shadow-sm group-hover:opacity-90 transition-opacity"
-              style={{ background: "var(--accent)" }}
-            >
-              <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 10v3" />
-                <path d="M6 6v11" />
-                <path d="M10 3v18" />
-                <path d="M14 8v7" />
-                <path d="M18 5v13" />
-                <path d="M22 10v4" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg shadow-sm group-hover:opacity-90 transition-opacity">
+              <svg width="32" height="32" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                <rect width="48" height="48" rx="11" fill="var(--chrome-accent)" />
+                <path
+                  d="M13 12h-4v24h4M35 12h4v24h-4"
+                  stroke="#0B1215"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path d="M17 18h14M17 30h9" stroke="#0B1215" strokeWidth="3" strokeLinecap="round" />
               </svg>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-bold tracking-tight" style={{ color: "var(--text)" }}>
+                <span className="text-base font-bold tracking-tight" style={{ color: "var(--chrome-text)" }}>
                   ULASA
                 </span>
-                <span 
+                <span
                   className="rounded px-1.5 py-0.2 text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}
+                  style={{ background: "var(--chrome-accent-soft)", color: "var(--chrome-accent-text)" }}
                 >
                   Clinical
                 </span>
               </div>
-              <span className="hidden sm:inline text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>
+              <span className="hidden sm:inline text-[11px] leading-tight" style={{ color: "var(--chrome-text-muted)" }}>
                 Language Assessment & Sample Analysis
               </span>
             </div>
@@ -71,9 +71,9 @@ export function Nav() {
                   href={link.href}
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all no-underline"
                   style={{
-                    color: active ? "var(--accent-text)" : "var(--text-muted)",
-                    background: active ? "var(--accent-soft)" : "transparent",
-                    border: active ? "1px solid var(--accent)" : "1px solid transparent",
+                    color: active ? "var(--chrome-accent-text)" : "var(--chrome-text-muted)",
+                    background: active ? "var(--chrome-accent-soft)" : "transparent",
+                    border: active ? "1px solid rgba(43, 192, 172, 0.5)" : "1px solid transparent",
                   }}
                   aria-current={active ? "page" : undefined}
                 >
@@ -86,24 +86,27 @@ export function Nav() {
 
         {/* Right side status & mobile hamburger */}
         <div className="flex items-center gap-3">
-          <div 
+          <div
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-            style={{ 
-              background: "rgba(16, 185, 129, 0.12)", 
-              color: "#059669", 
-              border: "1px solid rgba(16, 185, 129, 0.3)" 
+            style={{
+              background: "var(--chrome-accent-soft)",
+              color: "var(--chrome-accent-text)",
+              border: "1px solid rgba(43, 192, 172, 0.5)",
             }}
             title="Local-First: All analysis is computed in this browser. No audio or transcripts are uploaded."
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span
+              className="h-2 w-2 rounded-full animate-pulse"
+              style={{ background: "var(--chrome-accent)" }}
+            ></span>
             <span className="font-semibold text-[11px]">100% On-Device / Private</span>
           </div>
 
           {/* Mobile hamburger button */}
           <button
             type="button"
-            className="md:hidden p-1.5 rounded-lg border text-muted hover:bg-surface-2"
-            style={{ borderColor: "var(--border)", color: "var(--text)" }}
+            className="md:hidden p-1.5 rounded-lg border"
+            style={{ borderColor: "var(--chrome-border)", color: "var(--chrome-text)" }}
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle Navigation Menu"
             aria-expanded={mobileOpen}
@@ -121,9 +124,9 @@ export function Nav() {
 
       {/* Mobile / Tablet Collapsible Drawer */}
       {mobileOpen && (
-        <nav 
+        <nav
           className="md:hidden border-t px-4 py-3 space-y-1"
-          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+          style={{ borderColor: "var(--chrome-border)", background: "var(--chrome-bg)" }}
         >
           {LINKS.map((link) => {
             const active = pathname === link.href;
@@ -134,9 +137,9 @@ export function Nav() {
                 onClick={() => setMobileOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium transition-colors no-underline"
                 style={{
-                  color: active ? "var(--accent-text)" : "var(--text)",
-                  background: active ? "var(--accent-soft)" : "transparent",
-                  border: active ? "1px solid var(--accent)" : "1px solid transparent",
+                  color: active ? "var(--chrome-accent-text)" : "var(--chrome-text)",
+                  background: active ? "var(--chrome-accent-soft)" : "transparent",
+                  border: active ? "1px solid rgba(43, 192, 172, 0.5)" : "1px solid transparent",
                 }}
                 aria-current={active ? "page" : undefined}
               >

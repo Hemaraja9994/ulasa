@@ -120,19 +120,26 @@ export const useStore = create<State>()(
         })),
 
       addSample: (sample) =>
-        set((s) => ({ samples: [sample, ...s.samples], activeSampleId: sample.id })),
+        set((s) => ({
+          samples: [{ ...sample, updatedAt: new Date().toISOString() }, ...s.samples],
+          activeSampleId: sample.id,
+        })),
 
       updateSample: (id, patch) =>
         set((s) => ({
           samples: s.samples.map((sample) =>
-            sample.id === id ? { ...sample, ...patch } : sample,
+            sample.id === id
+              ? { ...sample, ...patch, updatedAt: new Date().toISOString() }
+              : sample,
           ),
         })),
 
       replaceUtterances: (sampleId, utterances) =>
         set((s) => ({
           samples: s.samples.map((sample) =>
-            sample.id === sampleId ? { ...sample, utterances } : sample,
+            sample.id === sampleId
+              ? { ...sample, utterances, updatedAt: new Date().toISOString() }
+              : sample,
           ),
         })),
 

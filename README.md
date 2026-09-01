@@ -160,12 +160,31 @@ reference databases. The demonstration transcripts are original.
 
 ## Deployment
 
-The build produces static assets only — no serverless functions, no database, no
-runtime compute. It fits inside any static host's free tier.
+ULASA is a local-first application designed to run entirely in the browser. The build produces static assets (`out/` folder) with zero server-side runtime compute requirements, making it completely free to deploy on **Cloudflare Pages**, **Vercel**, or **GitHub Pages**.
 
-```bash
-npm run build
-```
+### Deploying on Cloudflare Pages (Recommended - 100% Free & Unlimited Bandwidth)
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) > **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
+2. Select repository: `Hemaraja9994/ulasa`.
+3. Configure build settings:
+   - **Framework preset**: `Next.js (Static HTML Export)` or `None`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `out`
+4. Click **Save and Deploy**.
+
+### Deploying on Vercel
+1. Import repository `Hemaraja9994/ulasa` in [Vercel Dashboard](https://vercel.com/new).
+2. The repository includes `.vercelignore` so that the heavy local Python sidecar is excluded from the cloud deployment.
+3. Framework preset: **Next.js**.
+4. Click **Deploy**.
+
+---
+
+## Authors & Credits
+
+- **Working Concept**: **Dr. Amoolya G**, Assistant Professor in Speech Language Pathology, All India Institute of Speech and Hearing (AIISH), Mysuru.
+- **Development**: **Mr. Hemaraja Nayaka.S**
+
+---
 
 ## Licence
 

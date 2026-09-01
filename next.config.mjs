@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: "export",
   // ULASA performs no server-side computation at runtime. Every measure, parser
   // and report generator executes in the clinician's browser. This keeps the
   // hosted deployment inside any provider's free tier and means audio and

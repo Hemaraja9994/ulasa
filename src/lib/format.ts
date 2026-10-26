@@ -61,3 +61,18 @@ export function fmtValue(value: number | null | undefined, unit?: string): strin
   if (value === null || value === undefined) return "—";
   return unit === "%" ? `${value}%` : String(value);
 }
+
+/** "5;2" (years;months), the clinical convention. */
+export function formatAge(years?: number, months?: number): string | null {
+  if (years === undefined) return null;
+  return `${years};${months ?? 0}`;
+}
+
+/** Parses "5;2", "5:2" or "5" into years and months; null when unreadable. */
+export function parseAge(text: string): { years: number; months: number } | null {
+  const m = text.trim().match(/^(\d{1,2})(?:\s*[;:.]\s*(\d{1,2}))?$/);
+  if (!m) return null;
+  const months = m[2] ? Number(m[2]) : 0;
+  if (months > 11) return null;
+  return { years: Number(m[1]), months };
+}

@@ -645,3 +645,23 @@ kbd {
 /* Inline background marks the selected row; hover must win over it. */
 .measure-row:hover { background: var(--bg) !important; }
 .seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* --- report ------------------------------------------------------------- */
+
+/* A4 at 96 dpi on screen; full width and unframed on paper. */
+.a4-page {
+  width: 794px;
+  max-width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-page);
+  padding: 56px 60px;
+}
+@media (max-width: 640px) {
+  .a4-page { padding: 28px 20px; }
+}
+@media print {
+  .report-grid { display: block !important; }
+  .a4-page { width: auto; box-shadow: none; padding: 0; }
+  main { padding: 0 !important; max-width: none !important; }
+}

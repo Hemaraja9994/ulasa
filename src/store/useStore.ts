@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Bcp47, CaseRecord, Sample, Utterance } from "@/core/types";
 import type { RubricScores } from "@/core/rubrics";
+import type { ReferenceSet } from "@/core/reference";
 
 /**
  * All ULASA state lives in the clinician's own browser.
@@ -43,6 +44,8 @@ export interface CloudSettings {
   whisperModel?: "tiny" | "base" | "small";
 }
 
+export type InputMethod = "type" | "audio" | "record" | "import";
+
 interface State {
   cases: CaseRecord[];
   samples: Sample[];
@@ -53,6 +56,12 @@ interface State {
   cloud: CloudSettings;
   audit: AuditEntry[];
   theme: "system" | "light" | "dark";
+  /** Local reference sets imported by the clinic. ULASA ships none. */
+  referenceSets: ReferenceSet[];
+  /** Baseline and follow-up sample ids chosen for Compare. */
+  comparePair: { baseline: string; followUp: string } | null;
+  /** How the next sample comes in; chosen on Home, read by Studio. Not persisted. */
+  inputMethod: InputMethod;
 
   /**
    * False until the persisted state has been read back from localStorage.
@@ -81,6 +90,10 @@ interface State {
 
   setCloud: (patch: Partial<CloudSettings>) => void;
   setTheme: (theme: State["theme"]) => void;
+  addReferenceSet: (set: ReferenceSet) => void;
+  deleteReferenceSet: (id: string) => void;
+  setComparePair: (pair: State["comparePair"]) => void;
+  setInputMethod: (method: InputMethod) => void;
   log: (action: string, detail: string, external?: boolean) => void;
   clearAll: () => void;
 }
@@ -108,6 +121,9 @@ export const useStore = create<State>()(
       cloud: DEFAULT_CLOUD,
       audit: [],
       theme: "system",
+      referenceSets: [],
+      comparePair: null,
+      inputMethod: "type",
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
@@ -160,6 +176,13 @@ export const useStore = create<State>()(
 
       setTheme: (theme) => set({ theme }),
 
+      addReferenceSet: (ref) =>
+        set((s) => ({ referenceSets: [ref, ...s.referenceSets.filter((r) => r.id !== ref.id)] })),
+      deleteReferenceSet: (id) =>
+        set((s) => ({ referenceSets: s.referenceSets.filter((r) => r.id !== id) })),
+      setComparePair: (pair) => set({ comparePair: pair }),
+      setInputMethod: (method) => set({ inputMethod: method }),
+
       log: (action, detail, external = false) =>
         set((s) => ({
           audit: [
@@ -175,6 +198,8 @@ export const useStore = create<State>()(
           rubrics: {},
           reportDrafts: {},
           activeSampleId: null,
+          referenceSets: [],
+          comparePair: null,
           audit: [
             {
               at: new Date().toISOString(),
@@ -199,6 +224,8 @@ export const useStore = create<State>()(
         cloud: s.cloud,
         audit: s.audit,
         theme: s.theme,
+        referenceSets: s.referenceSets,
+        comparePair: s.comparePair,
       }),
       onRehydrateStorage: () => (state) => {
         // Runs once localStorage has been read, whether or not there was

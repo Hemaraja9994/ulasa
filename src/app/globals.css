@@ -48,6 +48,15 @@
   --experimental: #7C3AED;
   --experimental-soft: #F5F3FF;
   --experimental-text: #5B21B6;
+  --accent-mid: #A5B4FC;
+  --success: #10B981;
+  --success-soft: #ECFDF5;
+  --success-text: #065F46;
+  --success-border: #A7F3D0;
+  --ok-text: #047857;
+  --danger-tint: #FEF2F2;
+  --header-bg: rgba(255, 255, 255, 0.94);
+  --shadow-page: 0 1px 3px rgba(20, 22, 43, 0.08), 0 12px 32px rgba(20, 22, 43, 0.08);
 }
 
 :root[data-theme="dark"], :root:not([data-theme="light"]) {
@@ -78,6 +87,15 @@
   --experimental: #A78BFA;
   --experimental-soft: rgba(167, 139, 250, 0.15);
   --experimental-text: #C4B5FD;
+  --accent-mid: rgba(165, 180, 252, 0.45);
+  --success: #34D399;
+  --success-soft: rgba(16, 185, 129, 0.12);
+  --success-text: #34D399;
+  --success-border: rgba(52, 211, 153, 0.35);
+  --ok-text: #34D399;
+  --danger-tint: rgba(239, 68, 68, 0.1);
+  --header-bg: rgba(20, 22, 44, 0.92);
+  --shadow-page: 0 1px 3px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 :root[data-theme="light"] {
@@ -108,19 +126,38 @@
   --experimental: #7C3AED;
   --experimental-soft: #F5F3FF;
   --experimental-text: #5B21B6;
+  --accent-mid: #A5B4FC;
+  --success: #10B981;
+  --success-soft: #ECFDF5;
+  --success-text: #065F46;
+  --success-border: #A7F3D0;
+  --ok-text: #047857;
+  --danger-tint: #FEF2F2;
+  --header-bg: rgba(255, 255, 255, 0.94);
+  --shadow-page: 0 1px 3px rgba(20, 22, 43, 0.08), 0 12px 32px rgba(20, 22, 43, 0.08);
 }
 
 /*
  * Indic script coverage. Every one of the six supported languages needs a font
  * that shapes its script correctly — conjuncts in Devanagari, the Tamil
  * grantha letters, Kannada/Telugu vowel signs, Malayalam's chillu characters.
- * The Noto family is bundled by most systems; the stack falls through to it.
+ *
+ * IBM Plex covers Latin; each Noto face covers one Indic script. The browser
+ * picks per glyph, so a Kannada line with an English insertion renders the
+ * insertion in Plex and the rest in Noto Sans Kannada with no per-token logic.
+ * Fonts come from @fontsource (imported in layout.tsx), self-hosted with the
+ * static export: no request goes to a font CDN at runtime.
  */
 html {
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", "Noto Sans Kannada",
-    "Noto Sans Telugu", "Noto Sans Malayalam", "Nirmala UI", sans-serif;
+  --font-indic:
+    "Noto Sans Devanagari", "Noto Sans Kannada", "Noto Sans Tamil", "Noto Sans Telugu",
+    "Noto Sans Malayalam", "Nirmala UI";
+  --font-ui:
+    "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    var(--font-indic), sans-serif;
+  --font-code:
+    "IBM Plex Mono", ui-monospace, Menlo, Consolas, var(--font-indic), monospace;
+  font-family: var(--font-ui);
 }
 
 body {
@@ -138,7 +175,150 @@ body {
 }
 
 .mono {
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-family: var(--font-code);
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* --- redesign primitives ------------------------------------------------- */
+
+/* 11px uppercase section / column label. */
+.caps {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Segmented control: a tinted track with one raised segment. */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border-radius: 9px;
+}
+.seg-btn {
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.seg-btn[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent-text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill-neutral { background: var(--surface-2); color: var(--accent-text); }
+.pill-short {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  border: 1px solid var(--warn-border);
+}
+.pill-exp {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  background: var(--experimental-soft);
+  color: var(--experimental-text);
+}
+.pill-privacy {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  gap: 7px;
+  color: var(--success-text);
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
+}
+
+/* Measure status badge: established / descriptive / experimental / unavailable. */
+.status {
+  display: inline-flex;
+  flex: none;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.status-established { background: var(--accent-soft); color: var(--accent-text); }
+.status-descriptive { background: var(--success-soft); color: var(--success-text); }
+.status-experimental { background: var(--experimental-soft); color: var(--experimental-text); }
+.status-unavailable { background: var(--surface-2); color: var(--text-muted); }
+
+/* Grid-based table rows. Column templates are set inline per table. */
+.trow-head {
+  display: grid;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--surface-2);
+}
+.trow {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 18px;
+  border-top: 1px solid var(--surface-2);
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+}
+.trow-click { cursor: pointer; }
+.trow-click:hover { background: var(--bg); }
+
+/* Card without the hover border shift, for workspace panels. */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* Wide grid tables scroll sideways on narrow screens instead of crushing. */
+.hscroll { overflow-x: auto; }
+.hscroll > .hscroll-inner { min-width: 760px; }
+
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 500;
+}
+.link-btn:hover { color: var(--accent-hover); }
+
+kbd {
+  font-family: var(--font-code);
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
 }
 
 /* --- primitives ---------------------------------------------------------- */

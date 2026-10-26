@@ -64,3 +64,7 @@ analysis. Correct boundaries before you trust any number.
 The service binds to `127.0.0.1` only. Do not change `ULASA_HOST` to `0.0.0.0`
 without understanding that it exposes recorded child speech to your whole
 network.
+
+For the same reason the sidecar is never deployed as a website.
+`sidecar/vercel.json` turns off Vercel's automatic Git deployments, so a Vercel
+project pointed at this folder does not try to build it.

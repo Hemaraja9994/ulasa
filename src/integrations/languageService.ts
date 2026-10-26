@@ -23,7 +23,7 @@ import { makeGloss } from "@/core/types";
  * never scored.
  */
 
-export type ProviderId = "offline" | "sidecar" | "bhashini" | "google";
+export type ProviderId = "offline" | "browser-whisper" | "sidecar" | "bhashini" | "google";
 
 export interface AsrSegment {
   text: string;
@@ -372,7 +372,10 @@ export async function resolveService(settings: {
   bhashiniUserId: string;
   bhashiniApiKey: string;
   googleApiKey: string;
-}): Promise<LanguageService> {
+  /** "whisper" (default) = in-browser Whisper when nothing else is configured. */
+  asrEngine?: "whisper" | "none";
+  whisperModel?: "tiny" | "base" | "small";
+}, opts?: { onAsrProgress?: (p: import("@/integrations/browserWhisper").AsrProgress) => void }): Promise<LanguageService> {
   if (settings.sidecarEnabled) {
     const sidecar = new LocalSidecarService(settings.sidecarUrl);
     if (await sidecar.available()) return sidecar;
@@ -384,6 +387,12 @@ export async function resolveService(settings: {
 
     const google = new GoogleCloudService(settings.googleApiKey);
     if (await google.available()) return google;
+  }
+
+  if ((settings.asrEngine ?? "whisper") === "whisper" && typeof window !== "undefined") {
+    const { BrowserWhisperService } = await import("@/integrations/browserWhisper");
+    const whisper = new BrowserWhisperService(settings.whisperModel ?? "base", opts?.onAsrProgress);
+    if (await whisper.available()) return whisper;
   }
 
   return new OfflineNoOpService();

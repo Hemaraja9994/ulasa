@@ -37,6 +37,10 @@ export interface CloudSettings {
   googleApiKey: string;
   /** Strip names, phone numbers and addresses before any external call. */
   redactBeforeSending: boolean;
+  /** Speech-recognition engine used when no sidecar/cloud provider answers. */
+  asrEngine?: "whisper" | "none";
+  /** In-browser Whisper model size. */
+  whisperModel?: "tiny" | "base" | "small";
 }
 
 interface State {
@@ -89,6 +93,8 @@ const DEFAULT_CLOUD: CloudSettings = {
   bhashiniApiKey: "",
   googleApiKey: "",
   redactBeforeSending: true,
+  asrEngine: "whisper",
+  whisperModel: "base",
 };
 
 export const useStore = create<State>()(

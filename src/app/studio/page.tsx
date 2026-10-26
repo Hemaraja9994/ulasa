@@ -10,6 +10,8 @@ import { writeSaltText } from "@/core/io/salt";
 import { Waveform } from "@/components/Waveform";
 import { computeWaveform, deleteAudio, formatTime, loadAudio, saveAudio } from "@/lib/audio";
 import { resolveService, ProviderUnavailable } from "@/integrations/languageService";
+import { formatDraftLines } from "@/integrations/asrFormat";
+import { WHISPER_MODELS, type AsrProgress, type WhisperSize } from "@/integrations/browserWhisper";
 import type { Bcp47, Utterance } from "@/core/types";
 
 /**
@@ -31,6 +33,7 @@ export default function Studio() {
   const updateSample = useStore((s) => s.updateSample);
   const replaceUtterances = useStore((s) => s.replaceUtterances);
   const cloud = useStore((s) => s.cloud);
+  const setCloud = useStore((s) => s.setCloud);
   const log = useStore((s) => s.log);
 
   const [view, setView] = useState<"transcript" | "coding">("transcript");
@@ -40,6 +43,9 @@ export default function Studio() {
     busy: false,
     message: null,
   });
+  const [asrProgress, setAsrProgress] = useState<AsrProgress | null>(null);
+  const [asrDraftNote, setAsrDraftNote] = useState<string | null>(null);
+  const whisperSize: WhisperSize = cloud.whisperModel ?? "base";
 
   // --- audio ---------------------------------------------------------------
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -177,8 +183,9 @@ export default function Studio() {
   async function runAsr() {
     if (!sample?.audioKey) return;
     setAsrState({ busy: true, message: null });
+    setAsrProgress(null);
     try {
-      const service = await resolveService(cloud);
+      const service = await resolveService(cloud, { onAsrProgress: setAsrProgress });
       const blob = await loadAudio(sample.audioKey);
       if (!blob) throw new Error("The audio for this sample is no longer in this browser.");
 
@@ -190,10 +197,12 @@ export default function Studio() {
       );
 
       const targetCode = sample.speakers.find((s) => s.isTarget)?.code ?? "C";
-      const lines = result.segments.map((seg) => `${targetCode} ${seg.text.trim()}`);
+      const lines = formatDraftLines(result.segments, targetCode);
       setDraft((prev) => (prev.trim() ? prev + "\n" + lines.join("\n") : lines.join("\n")));
       setDirty(true);
-      setAsrState({ busy: false, message: result.modelNote });
+      setAsrProgress(null);
+      setAsrDraftNote(result.modelNote);
+      setAsrState({ busy: false, message: null });
     } catch (error) {
       const message =
         error instanceof ProviderUnavailable
@@ -201,6 +210,7 @@ export default function Studio() {
           : error instanceof Error
             ? error.message
             : "Speech recognition failed.";
+      setAsrProgress(null);
       setAsrState({ busy: false, message });
     }
   }
@@ -286,7 +296,22 @@ export default function Studio() {
             </label>
             {sample.audioKey && (
               <>
-                <button className="btn" disabled={asrState.busy} onClick={() => void runAsr()}>
+                {!cloud.sidecarEnabled && (cloud.asrEngine ?? "whisper") === "whisper" && (
+                  <select
+                    className="select"
+                    style={{ width: "auto" }}
+                    value={whisperSize}
+                    disabled={asrState.busy}
+                    onChange={(e) => setCloud({ whisperModel: e.target.value as WhisperSize })}
+                    aria-label="Speech model size"
+                    title="In-browser Whisper model. Downloaded once, then cached by the browser."
+                  >
+                    {(Object.keys(WHISPER_MODELS) as WhisperSize[]).map((k) => (
+                      <option key={k} value={k}>{WHISPER_MODELS[k].label}</option>
+                    ))}
+                  </select>
+                )}
+                <button className="btn btn-primary" disabled={asrState.busy} onClick={() => void runAsr()}>
                   {asrState.busy ? "Drafting…" : "Draft with speech recognition"}
                 </button>
                 <button
@@ -370,9 +395,40 @@ export default function Studio() {
         ) : (
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
             Audio is optional. Every measure ULASA reports can be computed from a typed transcript.
-            Attaching audio adds waveform navigation and, if you have enabled a recogniser, a draft
-            transcript. Audio is stored in this browser and is never uploaded.
+            Attaching audio adds waveform navigation and a speech-recognition draft (Whisper running in
+            this browser by default). Audio is stored in this browser and is never uploaded.
           </p>
+        )}
+
+        {asrState.busy && (
+          <div className="mt-3 space-y-1.5" role="status" aria-live="polite">
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {asrProgress?.stage === "downloading"
+                ? `Downloading speech model (first use only, then cached)… ${asrProgress.percent ?? 0}%`
+                : asrProgress?.stage === "loading"
+                  ? "Loading speech model…"
+                  : asrProgress?.stage === "transcribing"
+                    ? `Transcribing on this device${asrProgress.device ? ` (${asrProgress.device})` : ""}… long recordings take a while.`
+                    : "Preparing audio…"}
+            </p>
+            <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  background: "var(--accent)",
+                  width: `${asrProgress?.stage === "downloading" ? asrProgress.percent ?? 2 : asrProgress?.stage === "transcribing" || asrProgress?.stage === "loading" ? 100 : 5}%`,
+                  opacity: asrProgress?.stage === "transcribing" ? 0.5 : 1,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {asrDraftNote && (
+          <div className="notice notice-warn mt-3">
+            <strong>Draft — check before analysis.</strong> {asrDraftNote}{" "}
+            <button type="button" className="underline" onClick={() => setAsrDraftNote(null)}>Dismiss</button>
+          </div>
         )}
 
         {asrState.message && (

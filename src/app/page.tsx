@@ -1,564 +1,307 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { newSampleId, SUPPORTED_LANGUAGES, useStore } from "@/store/useStore";
+import { SUPPORTED_LANGUAGES, useStore } from "@/store/useStore";
+import { INPUT_METHODS } from "@/lib/inputMethods";
 import { parseSaltText } from "@/core/io/salt";
-import { parseChat } from "@/core/io/chat";
 import { FIXTURES } from "@/data/fixtures";
-import { analysisSet } from "@/core/analyse";
+import { analyseSample, analysisSet } from "@/core/analyse";
 import { Hydrated } from "@/components/Hydrated";
 import { getPack } from "@/nlp/registry";
-import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
-import { Dropzone } from "@/components/Dropzone";
-import { FilterChips, FilterChipOption } from "@/components/FilterChips";
-import { exportUlasaJson, exportSalt, exportChat } from "@/reports/export";
-import type { Bcp47, ElicitationContext, Sample } from "@/core/types";
+import { CONTEXT_LABELS, contextLabel, formatDate } from "@/lib/format";
+import { useSampleActions } from "@/lib/useSampleActions";
+import { findMeasure } from "@/lib/measures";
+import type { Bcp47, ElicitationContext } from "@/core/types";
 
+/** Feature tags for the demonstration cards. */
+const DEMO_TAGS: Record<string, string[]> = {
+  "en-preschool": ["Mazes", "Overregularisation"],
+  "hi-conversation": ["Postpositions", "Code-mixing"],
+  "kn-conversation": ["Diglossia", "Quotative ಅಂತ"],
+  "ta-narrative": ["Agglutination", "Narrative"],
+  "te-narrative": ["PNG agreement", "Narrative"],
+  "ml-conversation": ["No agreement", "Sandhi"],
+  bilingual: ["Code-mixing", "Classroom talk"],
+  unintelligible: ["Intelligibility", "X · XXX"],
+  short: ["Below 50 utterances"],
+};
 
-export default function Dashboard() {
+const RECENT_COLS = "minmax(0,1.6fr) 1fr 1fr 1.1fr 0.8fr 0.8fr 90px";
+
+export default function Home() {
   const router = useRouter();
   const samples = useStore((s) => s.samples);
-  const addSample = useStore((s) => s.addSample);
-  const deleteSample = useStore((s) => s.deleteSample);
   const setActiveSample = useStore((s) => s.setActiveSample);
-  const log = useStore((s) => s.log);
+  const inputMethod = useStore((s) => s.inputMethod);
+  const setInputMethod = useStore((s) => s.setInputMethod);
+  const { createBlank, loadFixture, importFiles } = useSampleActions();
 
   const fileRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState("");
-  const [language, setLanguage] = useState<Bcp47>("en-IN");
+  const [caseId, setCaseId] = useState("");
+  const [language, setLanguage] = useState<Bcp47>("kn-IN");
   const [context, setContext] = useState<ElicitationContext>("conversation");
-  const [importWarnings, setImportWarnings] = useState<string[]>([]);
-  const [filter, setFilter] = useState("all");
-  const [showDropzone, setShowDropzone] = useState(false);
+  const [importNotes, setImportNotes] = useState<string[]>([]);
 
-  // Deletion modal state
-  const [deleteTarget, setDeleteTarget] = useState<Sample | null>(null);
+  const demos = useMemo(
+    () =>
+      FIXTURES.map((f) => {
+        const { sample } = parseSaltText(f.text, { language: f.language as Bcp47 });
+        const target = sample.speakers.find((s) => s.isTarget);
+        const first = sample.utterances.find((u) => u.speakerId === target?.id);
+        return { ...f, line: first?.text ?? f.description, tags: DEMO_TAGS[f.id] ?? [] };
+      }),
+    [],
+  );
 
-  function createBlank() {
-    const id = newSampleId();
-    addSample({
-      id,
-      caseId: "unassigned",
-      title: title.trim() || "Untitled sample",
-      language,
-      elicitationContext: context,
-      speakers: [
-        { id: "spk-0", code: "C", role: "child", isTarget: true },
-        { id: "spk-1", code: "E", role: "examiner", isTarget: false },
-      ],
-      utterances: [],
-    });
-    log("create_sample", `Created "${title.trim() || "Untitled sample"}" in ${language}.`);
-    setTitle("");
-    router.push("/studio");
+  const recent = useMemo(
+    () =>
+      samples.slice(0, 5).map((s) => {
+        const analysis = analyseSample(s);
+        return {
+          sample: s,
+          n: analysisSet(s).length,
+          mlu: findMeasure(analysis, "mlu_w")?.value ?? null,
+          ndw: findMeasure(analysis, "ndw")?.value ?? null,
+        };
+      }),
+    [samples],
+  );
+
+  function create() {
+    if (inputMethod === "import") {
+      fileRef.current?.click();
+      return;
+    }
+    createBlank({ caseId, language, context });
   }
 
-  function loadFixture(fixtureId: string, destination: "/studio" | "/analyse" = "/studio") {
-    const fixture = FIXTURES.find((f) => f.id === fixtureId);
-    if (!fixture) return;
-    const { sample, warnings } = parseSaltText(fixture.text, {
-      language: fixture.language as Bcp47,
-    });
-    addSample({ ...sample, id: newSampleId(), title: fixture.label });
-    setImportWarnings(warnings);
-    log("load_fixture", `Loaded the "${fixture.label}" demonstration sample.`);
-    router.push(destination);
-  }
-
-  async function handleFiles(files: File[]) {
-    const allWarnings: string[] = [];
-    for (const file of files) {
-      const text = await file.text();
-      const isChat = file.name.endsWith(".cha") || text.trimStart().startsWith("@UTF8");
-
-      if (file.name.endsWith(".json")) {
-        try {
-          const parsed = JSON.parse(text);
-          const sample = parsed.sample ?? parsed;
-          addSample({ ...sample, id: newSampleId() });
-          log("import", `Imported ULASA JSON "${file.name}".`);
-        } catch {
-          allWarnings.push(`"${file.name}" is not a readable ULASA JSON file.`);
-        }
-        continue;
-      }
-
-      const { sample, warnings } = isChat
-        ? parseChat(text)
-        : parseSaltText(text, { language, title: file.name });
-
-      addSample({ ...sample, id: newSampleId(), title: sample.title || file.name });
-      if (warnings.length > 0) allWarnings.push(...warnings);
-      log("import", `Imported ${isChat ? "CHAT" : "SALT-style"} transcript "${file.name}".`);
-    }
-    setImportWarnings(allWarnings);
-    if (files.length === 1) {
-      router.push("/studio");
-    }
-  }
-
-  // Filter options for samples table
-  const filterOptions: FilterChipOption[] = useMemo(() => {
-    const counts: Record<string, number> = {};
-    samples.forEach((s) => {
-      counts[s.language] = (counts[s.language] || 0) + 1;
-    });
-
-    const opts: FilterChipOption[] = [{ id: "all", label: "All Samples", count: samples.length }];
-    SUPPORTED_LANGUAGES.forEach((l) => {
-      if (counts[l.id]) {
-        opts.push({ id: l.id, label: l.label, count: counts[l.id] });
-      }
-    });
-    return opts;
-  }, [samples]);
-
-  const filteredSamples = useMemo(() => {
-    if (filter === "all") return samples;
-    return samples.filter((s) => s.language === filter);
-  }, [samples, filter]);
-
-  function getContextBadgeColor(ctx: ElicitationContext) {
-    switch (ctx) {
-      case "conversation":
-        return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300";
-      case "play":
-        return "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-900/60 dark:bg-purple-950/40 dark:text-purple-300";
-      case "narrative_retell":
-      case "personal_narrative":
-        return "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-900/60 dark:bg-teal-950/40 dark:text-teal-300";
-      case "expository":
-      case "persuasion":
-        return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300";
-      default:
-        return "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300";
-    }
+  function open(id: string) {
+    setActiveSample(id);
+    router.push("/analyse");
   }
 
   return (
-    <div className="space-y-12">
-      {/* --- Hero ---------------------------------------------------------- */}
-      <section className="hero max-w-3xl space-y-5">
-        <h1 className="hero-title">
-          Language sample analysis for <span className="hl">English and Indian languages</span>
-        </h1>
-        <p className="text-lg" style={{ color: "var(--text-muted)" }}>
-          Transcribe or import a sample, get standard LSA measures, compare sessions and export a
-          report — in English, Hindi, Kannada, Tamil, Telugu and Malayalam, right in your browser.
-        </p>
-        <div className="flex flex-wrap gap-3 pt-1">
-          <button type="button" className="btn btn-primary btn-lg" onClick={() => loadFixture("en-preschool", "/analyse")}>
-            Try a sample in 30 seconds
-          </button>
-          <a href="#start" className="btn btn-lg no-underline">Start your own sample</a>
-        </div>
-      </section>
-
-      {/* --- Feature cards --------------------------------------------------- */}
-      <section className="grid gap-4 md:grid-cols-3" aria-label="Features">
-        {[
-          { title: "Standard measures", body: "MLU, NDW, MATTR, MTLD, mazes, intelligibility, rate and errors, each explained in the glossary.", href: "/glossary", cta: "Open glossary" },
-          { title: "Compare two samples", body: "Baseline and follow-up side by side, with the difference for every measure.", href: "/compare", cta: "Compare samples" },
-          { title: "Reports & exports", body: "Print to PDF, DOCX report, CSV, SALT-style text, CHAT and lossless JSON.", href: "/report", cta: "Draft a report" },
-        ].map((f) => (
-          <Link key={f.title} href={f.href} className="card block p-6 no-underline">
-            <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>{f.title}</h2>
-            <p className="mt-2 text-[0.9375rem]" style={{ color: "var(--text-muted)" }}>{f.body}</p>
-            <p className="mt-4 text-[0.9375rem] font-medium" style={{ color: "var(--accent)" }}>{f.cta} &rarr;</p>
-          </Link>
-        ))}
-      </section>
-
-      {/* --- Start / Import Sample ------------------------------------------ */}
-      <section id="start" className="card p-5 md:p-6 space-y-4 scroll-mt-24">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
-            Start a sample
-          </h2>
-          <button
-            type="button"
-            className="text-xs font-medium underline"
-            style={{ color: "var(--accent)" }}
-            onClick={() => setShowDropzone((v) => !v)}
-          >
-            {showDropzone ? "Hide batch dropzone" : "Batch dropzone"}
-          </button>
-        </div>
-
-        {/* 3-Column Inline Form */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              Sample Title
-            </span>
-            <input
-              className="input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Case 014 — baseline"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              Language Pack
-            </span>
-            <select
-              className="select font-medium"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as Bcp47)}
-            >
-              {SUPPORTED_LANGUAGES.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              Elicitation Context
-            </span>
-            <select
-              className="select font-medium"
-              value={context}
-              onChange={(e) => setContext(e.target.value as ElicitationContext)}
-            >
-              <option value="conversation">Conversation</option>
-              <option value="play">Play</option>
-              <option value="narrative_retell">Story retell</option>
-              <option value="personal_narrative">Personal narrative</option>
-              <option value="expository">Expository</option>
-              <option value="persuasion">Persuasion</option>
-              <option value="picture_description">Picture description</option>
-              <option value="parent_child">Parent–child</option>
-              <option value="classroom">Classroom</option>
-            </select>
-          </label>
-        </div>
-
-        {/* Action bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-            <span>Supported imports:</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">.txt (SALT)</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">.cha (CHAT)</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">.json (ULASA)</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => fileRef.current?.click()}
-              title="Import SALT, CHAT, or ULASA JSON"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              <span>Import File</span>
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".txt,.slt,.cha,.json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleFiles([file]);
-                e.target.value = "";
-              }}
-            />
-
-            <button type="button" className="btn btn-primary" onClick={createBlank}>
-              Create Sample
+    <div className="flex flex-col gap-10">
+      {/* --- hero + new sample ------------------------------------------- */}
+      <section className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-5 pt-3">
+          <span className="eyebrow self-start" style={{ fontSize: 11.5, letterSpacing: "0.07em", padding: "4px 10px" }}>
+            Free · open source · runs in your browser
+          </span>
+          <h1 className="m-0 font-bold" style={{ fontSize: "clamp(32px, 4.4vw, 44px)", lineHeight: 1.1, letterSpacing: "-0.03em", textWrap: "pretty" }}>
+            Language sample analysis for English and five Indian languages
+          </h1>
+          <p className="m-0 max-w-[560px]" style={{ fontSize: 18, lineHeight: 1.6, color: "var(--text-muted)", textWrap: "pretty" }}>
+            Transcribe or import a sample, get standard LSA measures with every number linked to the
+            utterances behind it, track change across sessions and export a clinical report.
+          </p>
+          <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label="Supported languages">
+            {SUPPORTED_LANGUAGES.map((l) => {
+              const pack = getPack(l.id);
+              return (
+                <li key={l.id} className="flex items-baseline gap-1.5 rounded-full border px-3 py-1.5" style={{ background: "var(--surface)", borderColor: "var(--border)", fontSize: 14 }}>
+                  <span className="font-semibold">{pack.nativeName}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{pack.name}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            <a href="#new-sample" className="btn btn-primary btn-lg no-underline" style={{ fontSize: 15, padding: "12px 20px" }}>
+              Start a sample
+            </a>
+            <button type="button" className="btn btn-lg" style={{ fontSize: 15, padding: "12px 20px" }} onClick={() => loadFixture("kn-conversation", "/analyse")}>
+              Open the Kannada demo
             </button>
           </div>
         </div>
 
-        {/* Collapsible Drag & Drop Zone */}
-        {showDropzone && (
-          <div className="pt-2">
-            <Dropzone onFiles={(files) => void handleFiles(files)} />
+        <section
+          id="new-sample"
+          className="flex scroll-mt-24 flex-col gap-4 rounded-[14px] border p-[22px]"
+          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(20,22,43,.05)" }}
+          aria-labelledby="new-sample-title"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="new-sample-title" className="m-0 font-semibold" style={{ fontSize: 17 }}>New sample</h2>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>No name needed · de-identified by default</span>
           </div>
-        )}
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <label className="flex flex-col gap-[5px] font-medium" style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+              Case ID
+              <input className="input" style={{ fontSize: 15 }} placeholder="e.g. Case 034" value={caseId} onChange={(e) => setCaseId(e.target.value)} />
+            </label>
+            <label className="flex flex-col gap-[5px] font-medium" style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+              Elicitation context
+              <select className="select" style={{ fontSize: 15 }} value={context} onChange={(e) => setContext(e.target.value as ElicitationContext)}>
+                {Object.entries(CONTEXT_LABELS).filter(([k]) => k !== "other").map(([k, label]) => (
+                  <option key={k} value={k}>{label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="font-medium" style={{ fontSize: 12.5, color: "var(--text-muted)" }} id="pack-label">Language pack</span>
+            <div className="seg grid grid-cols-3 gap-1 sm:grid-cols-6" role="group" aria-labelledby="pack-label">
+              {SUPPORTED_LANGUAGES.map((l) => {
+                const pack = getPack(l.id);
+                return (
+                  <button key={l.id} type="button" className="seg-btn" style={{ padding: "7px 4px", fontSize: 14, fontWeight: 600 }} aria-pressed={language === l.id} title={pack.name} onClick={() => setLanguage(l.id)}>
+                    {pack.nativeName}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="font-medium" style={{ fontSize: 12.5, color: "var(--text-muted)" }} id="method-label">How will the sample come in?</span>
+            <div className="grid gap-2 sm:grid-cols-2" role="group" aria-labelledby="method-label">
+              {INPUT_METHODS.map((m) => {
+                const on = inputMethod === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setInputMethod(m.id)}
+                    className="flex flex-col gap-0.5 rounded-[10px] border px-3.5 py-3 text-left transition-colors"
+                    style={{ background: on ? "var(--accent-soft)" : "var(--surface)", borderColor: on ? "var(--accent-mid)" : "var(--border)", cursor: "pointer" }}
+                  >
+                    <span className="font-semibold" style={{ fontSize: 14.5 }}>{m.label}</span>
+                    <span style={{ fontSize: 12.5, lineHeight: 1.45, color: "var(--text-muted)" }}>{m.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <button type="button" className="btn btn-primary" style={{ fontSize: 15, padding: 11, borderRadius: 9 }} onClick={create}>
+            {inputMethod === "import" ? "Choose a file to import" : "Create sample and open Studio"}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".txt,.slt,.cha,.json"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []);
+              if (files.length) void importFiles(files, { caseId, language }).then(setImportNotes);
+              e.target.value = "";
+            }}
+          />
+        </section>
       </section>
 
-      {importWarnings.length > 0 && (
+      {importNotes.length > 0 && (
         <div className="notice notice-warn">
-          <strong>Import notes:</strong>
-          <ul className="mt-1 list-disc pl-5 space-y-0.5">
-            {importWarnings.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
+          <strong>Import notes</strong>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {importNotes.map((w, i) => <li key={i}>{w}</li>)}
           </ul>
         </div>
       )}
 
-      {/* --- Your Samples Table --------------------------------------------- */}
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
-            Your Samples
-          </h2>
-          {samples.length > 0 && (
-            <FilterChips
-              options={filterOptions}
-              activeId={filter}
-              onChange={setFilter}
-            />
-          )}
+      {/* --- recent samples ---------------------------------------------- */}
+      <section className="flex flex-col gap-3" aria-labelledby="recent-title">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="recent-title" className="m-0 font-semibold" style={{ fontSize: 20, letterSpacing: "-0.01em" }}>Recent samples</h2>
+          <button type="button" className="link-btn" style={{ fontSize: 14 }} onClick={() => router.push("/clients")}>
+            All clients and sessions →
+          </button>
         </div>
-
         <Hydrated>
-          {samples.length === 0 ? (
-            <div className="card p-8 text-center" style={{ color: "var(--text-muted)" }}>
-              <p className="font-medium text-base" style={{ color: "var(--text)" }}>No samples recorded yet</p>
-              <p className="mt-1 text-sm">
-                Create a new sample above, or click a demonstration sample below to explore the clinical workflow.
-              </p>
-            </div>
-          ) : filteredSamples.length === 0 ? (
-            <div className="card p-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-              No samples match the selected language filter.
+          {recent.length === 0 ? (
+            <div className="panel p-8 text-center" style={{ color: "var(--text-muted)" }}>
+              <p className="m-0 font-medium" style={{ color: "var(--text)" }}>No samples yet</p>
+              <p className="m-0 mt-1 text-sm">Create one above, or open a demonstration sample below.</p>
             </div>
           ) : (
-            <div className="card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
-                  <thead>
-                    <tr style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-                      <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider border-b" style={{ borderColor: "var(--border)" }}>
-                        Sample Title
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider border-b" style={{ borderColor: "var(--border)" }}>
-                        Language
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider border-b" style={{ borderColor: "var(--border)" }}>
-                        Context
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider border-b" style={{ borderColor: "var(--border)" }}>
-                        Analysis Set
-                      </th>
-                      <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider border-b text-right" style={{ borderColor: "var(--border)" }}>
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSamples.map((sample) => {
-                      const set = analysisSet(sample);
-                      const pack = getPack(sample.language);
-                      const isShort = set.length > 0 && set.length < 50;
-
-                      return (
-                        <tr
-                          key={sample.id}
-                          className="hover:bg-surface-2 transition-colors border-b last:border-b-0"
-                          style={{ borderColor: "var(--border)" }}
-                        >
-                          <td className="px-4 py-3">
-                            <button
-                              type="button"
-                              className="font-semibold text-left transition-colors"
-                              style={{ color: "var(--accent)" }}
-                              onClick={() => {
-                                setActiveSample(sample.id);
-                                router.push("/studio");
-                              }}
-                            >
-                              {sample.title}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-medium">{pack.name}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getContextBadgeColor(sample.elicitationContext)}`}>
-                              {sample.elicitationContext.replace(/_/g, " ")}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {set.length === 0 ? (
-                              <span className="text-xs" style={{ color: "var(--text-muted)" }}>0 utterances</span>
-                            ) : (
-                              <div className="inline-flex items-center gap-1.5">
-                                <span className="font-semibold">{set.length}</span>
-                                <span className="text-xs" style={{ color: "var(--text-muted)" }}>utt.</span>
-                                {isShort && (
-                                  <span
-                                    className="badge badge-warn"
-                                    title="Standard LSA recommends at least 50 complete and intelligible verbal utterances."
-                                  >
-                                    ⚠️ SHORT
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                className="btn"
-                                style={{ padding: "0.25rem 0.55rem", fontSize: "0.8rem" }}
-                                onClick={() => {
-                                  setActiveSample(sample.id);
-                                  router.push("/studio");
-                                }}
-                                title="Open Transcription Studio"
-                              >
-                                Studio
-                              </button>
-                              <button
-                                type="button"
-                                className="btn"
-                                style={{ padding: "0.25rem 0.55rem", fontSize: "0.8rem" }}
-                                onClick={() => {
-                                  setActiveSample(sample.id);
-                                  router.push("/analyse");
-                                }}
-                                title="View Computed Analysis"
-                              >
-                                Analyse
-                              </button>
-                              <button
-                                type="button"
-                                className="btn"
-                                style={{ padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}
-                                onClick={() => exportUlasaJson(sample, null)}
-                                title="Export as ULASA JSON"
-                              >
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="btn"
-                                style={{ padding: "0.25rem 0.5rem", fontSize: "0.8rem", color: "var(--danger)" }}
-                                onClick={() => setDeleteTarget(sample)}
-                                title="Delete sample"
-                              >
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="panel hscroll overflow-hidden">
+              <div className="hscroll-inner">
+                <div className="trow-head caps" style={{ gridTemplateColumns: RECENT_COLS }}>
+                  <span>Sample</span><span>Language</span><span>Context</span><span>Analysis set</span>
+                  <span className="text-right">MLU-w</span><span className="text-right">NDW</span><span />
+                </div>
+                {recent.map(({ sample, n, mlu, ndw }) => (
+                  <div
+                    key={sample.id}
+                    role="link"
+                    tabIndex={0}
+                    className="trow trow-click"
+                    style={{ gridTemplateColumns: RECENT_COLS }}
+                    onClick={() => open(sample.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter") open(sample.id); }}
+                    aria-label={`Open ${sample.title} in Analyse`}
+                  >
+                    <span className="flex min-w-0 flex-col" style={{ lineHeight: 1.35 }}>
+                      <span className="truncate font-semibold">{sample.title}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{formatDate(sample.recordedAt)}</span>
+                    </span>
+                    <span>{getPack(sample.language).name}</span>
+                    <span><span className="pill pill-neutral">{contextLabel(sample.elicitationContext)}</span></span>
+                    <span className="flex items-center gap-2">
+                      <span className="tnum font-semibold">{n}</span>
+                      {n > 0 && n < 50 && <span className="pill pill-short" title="Below the 50-utterance convention">SHORT</span>}
+                    </span>
+                    <span className="tnum text-right">{mlu ?? "—"}</span>
+                    <span className="tnum text-right">{ndw ?? "—"}</span>
+                    <span className="text-right font-medium" style={{ color: "var(--accent)", fontSize: 13.5 }}>Open →</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </Hydrated>
       </section>
 
-      {/* --- Demonstration Samples Grid ------------------------------------- */}
-      <section className="space-y-3">
+      {/* --- demonstration samples --------------------------------------- */}
+      <section className="flex flex-col gap-3" aria-labelledby="demo-title">
         <div>
-          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
-            Demonstration Samples
-          </h2>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Original transcripts written specifically for ULASA. Contains no copyrighted materials or real child recordings.
+          <h2 id="demo-title" className="m-0 font-semibold" style={{ fontSize: 20, letterSpacing: "-0.01em" }}>Demonstration samples</h2>
+          <p className="m-0 mt-1" style={{ fontSize: 13.5, color: "var(--text-muted)" }}>
+            Original transcripts written for ULASA. No copyrighted stimuli and no real child recordings.
           </p>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FIXTURES.map((fixture) => {
-            
-            return (
-              <div
-                key={fixture.id}
-                role="button"
-                tabIndex={0}
-                className="card p-5 text-left transition-all hover:shadow-md cursor-pointer flex flex-col justify-between"
-                onClick={() => loadFixture(fixture.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    loadFixture(fixture.id);
-                  }
-                }}
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-base leading-snug" style={{ color: "var(--text)" }}>
-                      {fixture.label}
-                    </h3>
-                    <span className="badge badge-local font-mono text-xs shrink-0">
-                      {fixture.language}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
-                    {fixture.description}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
-                  <div className="flex items-center gap-1 text-sm font-medium" style={{ color: "var(--accent)" }}>
-                    <span>Load demonstration transcript</span>
-                    <span>&rarr;</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          {demos.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => loadFixture(d.id)}
+              className="demo-card flex flex-col gap-2.5 rounded-xl border p-[18px] text-left"
+              title={d.description}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="font-semibold" style={{ fontSize: 15 }}>{d.label}</span>
+                <span className="mono flex-none rounded-full px-2 py-0.5 font-semibold" style={{ fontSize: 11.5, background: "var(--accent-soft)", color: "var(--accent-text)" }}>
+                  {d.language.toUpperCase()}
+                </span>
+              </span>
+              <span style={{ fontSize: 16, lineHeight: 1.85 }}>{d.line}</span>
+              <span className="flex flex-wrap gap-1.5">
+                {d.tags.map((t) => (
+                  <span key={t} className="rounded-md px-2 py-0.5 font-medium" style={{ fontSize: 11.5, background: "var(--surface-2)", color: "var(--text-muted)" }}>{t}</span>
+                ))}
+              </span>
+            </button>
+          ))}
         </div>
       </section>
 
-      {/* --- Capabilities & Privacy Trust Card ------------------------------- */}
-      <section>
-        {/* Privacy & Local Architecture */}
-        <div className="card p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
-              Privacy & local architecture
-            </h2>
+      {/* --- trust strip -------------------------------------------------- */}
+      <section className="grid gap-px overflow-hidden rounded-xl border md:grid-cols-3" style={{ background: "var(--border)", borderColor: "var(--border)" }}>
+        {[
+          ["Stays on this device", "Transcripts live in this browser's storage and audio in IndexedDB. There is no ULASA server to upload to."],
+          ["Honest about every number", "Each measure is labelled established, experimental or unavailable for its language, with the reason written down."],
+          ["Cloud is off until you turn it on", "Speech recognition and gloss run locally by default. Every off-device action is written to an audit log."],
+        ].map(([title, body]) => (
+          <div key={title} className="flex flex-col gap-1.5 p-5" style={{ background: "var(--surface)" }}>
+            <span className="font-semibold" style={{ fontSize: 15 }}>{title}</span>
+            <span style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--text-muted)" }}>{body}</span>
           </div>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Built strictly for clinical compliance and patient privacy:
-          </p>
-          <ul className="space-y-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-            <li className="flex items-start gap-2">
-              <span className="font-bold text-emerald-600">✓</span>
-              <span><strong>100% On-Device:</strong> Transcripts live in localStorage; audio records in IndexedDB.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold text-emerald-600">✓</span>
-              <span><strong>Zero Server Egress:</strong> No ULASA telemetry, tracking, or cloud uploads.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold text-emerald-600">✓</span>
-              <span><strong>Optional Cloud:</strong> External ASR/MT is disabled by default and configurable in <Link href="/settings" style={{ color: "var(--accent)" }}>Settings</Link>.</span>
-            </li>
-          </ul>
-        </div>
+        ))}
       </section>
-
-      {/* --- Delete Confirmation Modal -------------------------------------- */}
-      <DeleteConfirmModal
-        isOpen={deleteTarget !== null}
-        sampleTitle={deleteTarget?.title ?? ""}
-        onConfirm={() => {
-          if (deleteTarget) {
-            deleteSample(deleteTarget.id);
-            log("delete_sample", `Deleted "${deleteTarget.title}".`);
-            setDeleteTarget(null);
-          }
-        }}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </div>
   );
 }

@@ -644,3 +644,4 @@ kbd {
 }
 /* Inline background marks the selected row; hover must win over it. */
 .measure-row:hover { background: var(--bg) !important; }
+.seg-btn:disabled { opacity: 0.45; cursor: not-allowed; }

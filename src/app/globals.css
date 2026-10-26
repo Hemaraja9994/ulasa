@@ -634,3 +634,13 @@ kbd {
   max-width: 5.5rem;
 }
 .add-code option, .add-code optgroup { color: var(--text); background: var(--surface); }
+
+/* --- analyse ------------------------------------------------------------ */
+
+.measure-row {
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+/* Inline background marks the selected row; hover must win over it. */
+.measure-row:hover { background: var(--bg) !important; }

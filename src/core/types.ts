@@ -179,6 +179,16 @@ export interface MeasureValue {
    *  language pack has no published protocol and the number is exploratory. */
   status: "established" | "experimental" | "unavailable";
   note?: string;
+  /** The utterances (and, where meaningful, token indices) this value was
+   *  computed from, so the UI can show the evidence behind every number.
+   *  Absent when the measure is unavailable. */
+  evidence?: MeasureEvidence[];
+}
+
+export interface MeasureEvidence {
+  utteranceId: string;
+  /** Indices into `utterance.tokens`. Absent when the whole utterance counts. */
+  tokenIdx?: number[];
 }
 
 export interface MeasureGroup {

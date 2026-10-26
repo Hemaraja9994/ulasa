@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "@/store/useStore";
 import { LocalSidecarService } from "@/integrations/languageService";
 import { PACKS } from "@/nlp/registry";
+import { WHISPER_MODELS, type WhisperSize } from "@/integrations/browserWhisper";
 
 export default function Settings() {
   const cloud = useStore((s) => s.cloud);
@@ -76,6 +77,60 @@ export default function Settings() {
             Erase all local data
           </button>
         </div>
+      </section>
+
+      {/* --- in-browser speech recognition ----------------------------------- */}
+      <section className="card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold">Speech recognition in this browser</h2>
+            <p className="mt-0.5 max-w-2xl text-sm" style={{ color: "var(--text-muted)" }}>
+              OpenAI Whisper running inside the browser (transformers.js / ONNX Runtime, WebGPU when
+              available, otherwise WebAssembly). Audio is processed on this device and is not uploaded;
+              the model weights are downloaded once from the Hugging Face CDN and cached by the browser.
+              Used when the local sidecar is off or not answering. Output is always a draft to check.
+            </p>
+          </div>
+          <span className="badge badge-local">on this device</span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>Engine</span>
+            <select
+              className="select"
+              style={{ width: "auto" }}
+              value={cloud.asrEngine ?? "whisper"}
+              onChange={(e) => {
+                setCloud({ asrEngine: e.target.value as "whisper" | "none" });
+                log("settings", `In-browser speech recognition ${e.target.value === "whisper" ? "enabled" : "disabled"}.`);
+              }}
+            >
+              <option value="whisper">In-browser Whisper (default)</option>
+              <option value="none">Off — type transcripts manually</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>Model size</span>
+            <select
+              className="select"
+              style={{ width: "auto" }}
+              value={cloud.whisperModel ?? "base"}
+              disabled={(cloud.asrEngine ?? "whisper") !== "whisper"}
+              onChange={(e) => setCloud({ whisperModel: e.target.value as WhisperSize })}
+            >
+              {(Object.keys(WHISPER_MODELS) as WhisperSize[]).map((k) => (
+                <option key={k} value={k}>{WHISPER_MODELS[k].label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+          Accuracy (our quick test on clear synthetic adult speech): English is good on every size.
+          Tamil is fair on tiny/base. Hindi is poor (base can switch to Urdu script; small is better
+          but mixes in romanised words). Kannada, Telugu and Malayalam are unreliable on all three
+          sizes and can produce the wrong script or repeated text. Child and clinical speech will
+          be harder. Always review the draft.
+        </p>
       </section>
 
       {/* --- local sidecar --------------------------------------------------- */}

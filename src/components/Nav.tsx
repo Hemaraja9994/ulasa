@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useHydrated, useStore } from "@/store/useStore";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -11,12 +12,28 @@ const LINKS = [
   { href: "/analyse", label: "Analyse" },
   { href: "/rubrics", label: "Rubrics" },
   { href: "/report", label: "Report" },
+  { href: "/compare", label: "Compare" },
+  { href: "/glossary", label: "Glossary" },
   { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
+  const hydrated = useHydrated();
+
+  // Apply the saved appearance on every page, not only on /settings.
+  useEffect(() => {
+    if (!hydrated) return;
+    const root = document.documentElement;
+    if (theme === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", theme);
+  }, [theme, hydrated]);
+
+  // "system" currently renders the dark palette, so treat it as dark here.
+  const isLight = theme === "light";
 
   return (
     <header
@@ -34,7 +51,7 @@ export function Nav() {
               className="flex h-8 w-8 items-center justify-center rounded-lg shadow-sm group-hover:opacity-90 transition-opacity"
               style={{ background: "var(--accent)" }}
             >
-              <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="h-4 w-4" style={{ color: "var(--on-accent)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 10v3" />
                 <path d="M6 6v11" />
                 <path d="M10 3v18" />
@@ -62,14 +79,14 @@ export function Nav() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-0.5">
             {LINKS.map((link) => {
               const active = pathname === link.href;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all no-underline"
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-semibold tracking-wide transition-all no-underline"
                   style={{
                     color: active ? "var(--accent-text)" : "var(--text-muted)",
                     background: active ? "var(--accent-soft)" : "transparent",
@@ -87,7 +104,7 @@ export function Nav() {
         {/* Right side status & mobile hamburger */}
         <div className="flex items-center gap-3">
           <div 
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
             style={{ 
               background: "rgba(16, 185, 129, 0.12)", 
               color: "#059669", 
@@ -99,10 +116,25 @@ export function Nav() {
             <span className="font-semibold text-[11px]">100% On-Device / Private</span>
           </div>
 
+          <button
+            type="button"
+            className="p-1.5 rounded-lg border"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
+            onClick={() => setTheme(isLight ? "dark" : "light")}
+            aria-label={isLight ? "Switch to dark theme" : "Switch to light theme"}
+            title={isLight ? "Dark theme" : "Light theme (best on projectors)"}
+          >
+            {hydrated && isLight ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" /></svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="4" /><path strokeLinecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
+            )}
+          </button>
+
           {/* Mobile hamburger button */}
           <button
             type="button"
-            className="md:hidden p-1.5 rounded-lg border text-muted hover:bg-surface-2"
+            className="lg:hidden p-1.5 rounded-lg border text-muted hover:bg-surface-2"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle Navigation Menu"
@@ -122,7 +154,7 @@ export function Nav() {
       {/* Mobile / Tablet Collapsible Drawer */}
       {mobileOpen && (
         <nav 
-          className="md:hidden border-t px-4 py-3 space-y-1"
+          className="lg:hidden border-t px-4 py-3 space-y-1"
           style={{ borderColor: "var(--border)", background: "var(--surface)" }}
         >
           {LINKS.map((link) => {

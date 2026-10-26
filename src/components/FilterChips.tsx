@@ -25,7 +25,7 @@ export function FilterChips({ options, activeId, onChange }: FilterChipsProps) {
             onClick={() => onChange(opt.id)}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
               active
-                ? "bg-teal-600 text-white shadow-sm dark:bg-teal-500"
+                ? "bg-indigo-700 text-white shadow-sm"
                 : "border border-slate-200 bg-surface text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
             style={{

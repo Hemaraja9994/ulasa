@@ -47,8 +47,8 @@ export function Dropzone({ onFiles }: DropzoneProps) {
       onClick={() => fileInputRef.current?.click()}
       className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 transition-all cursor-pointer text-center ${
         isDragging
-          ? "border-teal-500 bg-teal-50/50 dark:bg-teal-950/20"
-          : "border-slate-300 dark:border-slate-700 hover:border-teal-500/70 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+          ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20"
+          : "border-slate-300 dark:border-slate-700 hover:border-indigo-500/70 hover:bg-slate-50 dark:hover:bg-slate-800/40"
       }`}
       style={{
         borderColor: isDragging ? "var(--accent)" : undefined,

@@ -16,6 +16,7 @@ import {
 } from "@/reports/export";
 import { pickExemplars } from "@/reports/interpret";
 import type { MeasureValue } from "@/core/types";
+import { GLOSSARY_BY_KEY } from "@/data/glossary";
 
 export default function Analyse() {
   const sample = useActiveSample();
@@ -183,8 +184,18 @@ function MeasureRow({ measure }: { measure: MeasureValue }) {
   return (
     <div className="px-4 py-2.5">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm" style={{ color: unavailable ? "var(--text-muted)" : "var(--text)" }}>
+        <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: unavailable ? "var(--text-muted)" : "var(--text)" }}>
           {measure.label}
+          {GLOSSARY_BY_KEY[measure.key] && (
+            <Link
+              href={`/glossary#${measure.key}`}
+              className="glossary-tip no-print"
+              title={GLOSSARY_BY_KEY[measure.key].short}
+              aria-label={`What is ${measure.label}? ${GLOSSARY_BY_KEY[measure.key].short}`}
+            >
+              ?
+            </Link>
+          )}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {measure.status === "experimental" && (

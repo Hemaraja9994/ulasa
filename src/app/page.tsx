@@ -66,7 +66,7 @@ export default function Dashboard() {
     router.push("/studio");
   }
 
-  function loadFixture(fixtureId: string) {
+  function loadFixture(fixtureId: string, destination: "/studio" | "/analyse" = "/studio") {
     const fixture = FIXTURES.find((f) => f.id === fixtureId);
     if (!fixture) return;
     const { sample, warnings } = parseSaltText(fixture.text, {
@@ -75,7 +75,7 @@ export default function Dashboard() {
     addSample({ ...sample, id: newSampleId(), title: fixture.label });
     setImportWarnings(warnings);
     log("load_fixture", `Loaded the "${fixture.label}" demonstration sample.`);
-    router.push("/studio");
+    router.push(destination);
   }
 
   async function handleFiles(files: File[]) {
@@ -150,50 +150,92 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* --- Clinical Header ------------------------------------------------ */}
-      <section className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
-              Language Sample Analysis
+      {/* --- Hero ---------------------------------------------------------- */}
+      <section className="hero p-6 md:p-10">
+        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+          <div className="space-y-4">
+            <span className="eyebrow">Language sample analysis · English + 5 Indian languages</span>
+            <h1 className="hero-title">
+              From transcript to <span className="hl">clinical measures</span> in minutes.
             </h1>
-            <p className="mt-1 max-w-3xl text-sm" style={{ color: "var(--text-muted)" }}>
-              Clinician-grade transcription, morphosyntactic scoring, and report generation for English and five Indian languages.
-              Runs 100% on-device in your browser.
+            <p className="max-w-2xl text-base md:text-lg" style={{ color: "var(--text-muted)" }}>
+              Transcribe or import a language sample, get MLU, NDW, MATTR, MTLD, mazes, intelligibility
+              and code-mixing measures, then export a report. Built for SLPs, linguists and students,
+              and it runs in your browser.
             </p>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button type="button" className="btn btn-primary btn-lg" onClick={() => loadFixture("en-preschool", "/analyse")}>
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                Try a sample in 30 seconds
+              </button>
+              <Link href="/compare" className="btn btn-lg no-underline">Compare two samples</Link>
+              <a href="#start" className="btn btn-lg no-underline">Start your own</a>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 pt-2">
+              {[
+                { code: "EN", name: "English (India)" },
+                { code: "HI", name: "हिन्दी Hindi" },
+                { code: "KN", name: "ಕನ್ನಡ Kannada" },
+                { code: "TA", name: "தமிழ் Tamil" },
+                { code: "TE", name: "తెలుగు Telugu" },
+                { code: "ML", name: "മലയാളം Malayalam" },
+              ].map((lang) => (
+                <span
+                  key={lang.code}
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium"
+                  style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+                >
+                  <span className="font-mono text-[10px] font-bold" style={{ color: "var(--accent-text)" }}>{lang.code}</span>
+                  <span>{lang.name}</span>
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Supported language pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          {[
-            { code: "EN", name: "English (India)" },
-            { code: "HI", name: "हिन्दी Hindi" },
-            { code: "KN", name: "ಕನ್ನಡ Kannada" },
-            { code: "TA", name: "தமிழ் Tamil" },
-            { code: "TE", name: "తెలుగు Telugu" },
-            { code: "ML", name: "മലയാളം Malayalam" },
-          ].map((lang) => (
-            <span
-              key={lang.code}
-              className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium"
-              style={{
-                borderColor: "var(--border)",
-                background: "var(--surface)",
-                color: "var(--text)",
-              }}
-            >
-              <span className="font-mono text-[10px] font-bold" style={{ color: "var(--accent)" }}>
-                {lang.code}
-              </span>
-              <span>{lang.name}</span>
-            </span>
-          ))}
+          <ol className="card space-y-4 p-5" aria-label="How it works">
+            <li className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--saffron-text)", listStyle: "none" }}>
+              How it works
+            </li>
+            {[
+              ["Capture", "Type in the Studio, record audio, or import SALT (.txt), CHAT (.cha) or ULASA JSON."],
+              ["Analyse", "Standard measures are computed on complete & intelligible utterances, with glossary help for each."],
+              ["Report", "Draft a report, compare two samples, and export PDF, DOCX, CSV, SALT or CHAT."],
+            ].map(([t, d], i) => (
+              <li key={t} className="flex gap-3" style={{ listStyle: "none" }}>
+                <span className="step-num">{i + 1}</span>
+                <div>
+                  <p className="font-semibold" style={{ color: "var(--text)" }}>{t}</p>
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>{d}</p>
+                </div>
+              </li>
+            ))}
+            <li className="border-t pt-3 text-xs" style={{ borderColor: "var(--border)", color: "var(--text-muted)", listStyle: "none" }}>
+              Open on any phone or laptop: <span className="url-chip">ulasa.vercel.app</span>
+            </li>
+          </ol>
         </div>
       </section>
 
+      {/* --- Feature cards --------------------------------------------------- */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Features">
+        {[
+          { icon: "M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129", title: "Indian-language packs", body: "Hindi, Kannada, Tamil, Telugu and Malayalam alongside English, with Indic-script shaping and code-mixing measures.", href: "/protocols" },
+          { icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", title: "Standard LSA measures", body: "Length, lexical diversity, mazes, intelligibility, rate and errors, each with a plain-language glossary entry.", href: "/glossary" },
+          { icon: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4", title: "Side-by-side compare", body: "Put baseline and follow-up (or two contexts) next to each other with the difference for every measure.", href: "/compare" },
+          { icon: "M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z", title: "Reports & exports", body: "Printable PDF, DOCX report, measures & utterance CSV, SALT-style text, CHAT and lossless JSON.", href: "/report" },
+        ].map((f) => (
+          <Link key={f.title} href={f.href} className="card block p-4 no-underline transition-shadow hover:shadow-md">
+            <span className="feature-icon" aria-hidden="true">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={f.icon} /></svg>
+            </span>
+            <h2 className="mt-3 text-sm font-semibold" style={{ color: "var(--text)" }}>{f.title}</h2>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{f.body}</p>
+          </Link>
+        ))}
+      </section>
+
       {/* --- Start / Import Sample ------------------------------------------ */}
-      <section className="card p-5 md:p-6 space-y-4">
+      <section id="start" className="card p-5 md:p-6 space-y-4 scroll-mt-24">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text)" }}>
             Start a Sample

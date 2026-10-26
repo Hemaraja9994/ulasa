@@ -585,3 +585,52 @@ kbd {
   border-color: var(--accent-mid);
   box-shadow: 0 4px 14px rgba(67, 56, 202, 0.08);
 }
+
+/* --- studio ------------------------------------------------------------- */
+
+.mark-btn {
+  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.mark-btn:hover { border-color: var(--accent); color: var(--accent-text); }
+
+.filler-btn {
+  font-size: 13px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--warn-border);
+  background: var(--saffron-soft);
+  color: var(--saffron-text);
+  cursor: pointer;
+}
+
+/* --- code --------------------------------------------------------------- */
+
+.flag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.add-code {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 0;
+  max-width: 5.5rem;
+}
+.add-code option, .add-code optgroup { color: var(--text); background: var(--surface); }

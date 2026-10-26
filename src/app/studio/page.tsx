@@ -2,30 +2,51 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SUPPORTED_LANGUAGES, useActiveSample, useHydrated, useStore } from "@/store/useStore";
+import { type InputMethod, SUPPORTED_LANGUAGES, useActiveSample, useHydrated, useStore } from "@/store/useStore";
 import { parseUtteranceText, countableWords } from "@/core/tokenise";
-import { analysisSet, estimateClauses } from "@/core/analyse";
 import { getPack } from "@/nlp/registry";
-import { writeSaltText } from "@/core/io/salt";
 import { Waveform } from "@/components/Waveform";
+import { Dropzone } from "@/components/Dropzone";
 import { computeWaveform, deleteAudio, formatTime, loadAudio, saveAudio } from "@/lib/audio";
 import { resolveService, ProviderUnavailable } from "@/integrations/languageService";
 import { formatDraftLines } from "@/integrations/asrFormat";
 import { WHISPER_MODELS, type AsrProgress, type WhisperSize } from "@/integrations/browserWhisper";
-import type { Bcp47, Utterance } from "@/core/types";
+import { INPUT_METHODS } from "@/lib/inputMethods";
+import { CONTEXT_LABELS, formatDuration } from "@/lib/format";
+import { useSampleActions } from "@/lib/useSampleActions";
+import type { Bcp47, ElicitationContext, Utterance } from "@/core/types";
 
 /**
  * The Transcription Studio.
  *
- * Two views over the same utterance list:
- *   Transcript — a plain textarea using SALT-style conventions, for fast typing
- *   Coding     — one row per utterance for intelligibility, grammaticality,
- *                clause overrides and error codes
- *
- * The textarea is the fast path deliberately. A clinician transcribing 50
- * utterances wants to type, not to click through a form, and every convention
- * they already know from SALT works here unchanged.
+ * A plain textarea using SALT-style conventions, for fast typing. A clinician
+ * transcribing 50 utterances wants to type, not to click through a form, and
+ * every convention they already know from SALT works here unchanged. Coding
+ * (grammaticality, clauses, error codes) lives on its own step, /code.
  */
+
+const MIN_SET = 50;
+
+const MARKS: { label: string; tip: string; wrap?: [string, string]; insert?: string }[] = [
+  { label: "( )", tip: "Maze: wrap the selection (repetition, revision, filled pause, false start)", wrap: ["(", ")"] },
+  { label: "X", tip: "Unintelligible word", insert: "X" },
+  { label: "*", tip: "Omission: mark the next word as omitted", insert: "*" },
+  { label: "[ ]", tip: "Error or descriptive code", wrap: ["[", "]"] },
+  { label: "(:2.0)", tip: "Silent pause in seconds", insert: "(:2.0)" },
+  { label: "/", tip: "Bound-morpheme split; the surface spelling is preserved", insert: "/" },
+  { label: "+", tip: "Clinician comment, excluded from every count", insert: " +" },
+];
+
+const CONVENTIONS: [string, string][] = [
+  ["C  text", "Speaker code, then the utterance"],
+  ["(word)", "Maze, excluded from word counts"],
+  ["X  XXX", "Unintelligible word / run"],
+  ["*word", "Omitted word"],
+  ["word/m", "Bound-morpheme split"],
+  ["[E:CASE]", "Error code from the pack"],
+  ["(:2.5)", "Silent pause in seconds"],
+  ["+note", "Comment, never counted"],
+];
 
 export default function Studio() {
   const sample = useActiveSample();
@@ -35,14 +56,16 @@ export default function Studio() {
   const cloud = useStore((s) => s.cloud);
   const setCloud = useStore((s) => s.setCloud);
   const log = useStore((s) => s.log);
+  const method = useStore((s) => s.inputMethod);
+  const setMethod = useStore((s) => s.setInputMethod);
+  const { importFiles } = useSampleActions();
 
-  const [view, setView] = useState<"transcript" | "coding">("transcript");
   const [draft, setDraft] = useState("");
   const [dirty, setDirty] = useState(false);
-  const [asrState, setAsrState] = useState<{ busy: boolean; message: string | null }>({
-    busy: false,
-    message: null,
-  });
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [, setTick] = useState(0);
+  const [importNotes, setImportNotes] = useState<string[]>([]);
+  const [asrState, setAsrState] = useState<{ busy: boolean; message: string | null }>({ busy: false, message: null });
   const [asrProgress, setAsrProgress] = useState<AsrProgress | null>(null);
   const [asrDraftNote, setAsrDraftNote] = useState<string | null>(null);
   const whisperSize: WhisperSize = cloud.whisperModel ?? "base";
@@ -53,7 +76,14 @@ export default function Studio() {
   const [peaks, setPeaks] = useState<Float32Array | null>(null);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
+
+  // --- live recording --------------------------------------------------------
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const [recError, setRecError] = useState<string | null>(null);
 
   const pack = useMemo(() => (sample ? getPack(sample.language) : getPack("en-IN")), [sample]);
 
@@ -66,6 +96,7 @@ export default function Studio() {
     });
     setDraft(lines.join("\n"));
     setDirty(false);
+    setSavedAt(null);
   }, [sample?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load stored audio for this sample.
@@ -75,6 +106,7 @@ export default function Studio() {
       if (!sample?.audioKey) {
         setAudioUrl(null);
         setPeaks(null);
+        setDuration(0);
         return;
       }
       const blob = await loadAudio(sample.audioKey);
@@ -133,6 +165,7 @@ export default function Studio() {
 
     replaceUtterances(sample.id, utterances);
     setDirty(false);
+    setSavedAt(Date.now());
   }, [draft, pack, replaceUtterances, sample]);
 
   // Autosave two seconds after typing stops.
@@ -141,6 +174,19 @@ export default function Studio() {
     const timer = setTimeout(commitDraft, 2000);
     return () => clearTimeout(timer);
   }, [dirty, commitDraft]);
+
+  // Leaving the Studio (stepper, nav) must not lose the last two seconds of typing.
+  const pending = useRef({ dirty, commitDraft });
+  pending.current = { dirty, commitDraft };
+  useEffect(() => () => {
+    if (pending.current.dirty) pending.current.commitDraft();
+  }, []);
+
+  // Keep "Saved n s ago" fresh.
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 5000);
+    return () => clearInterval(t);
+  }, []);
 
   const liveCounts = useMemo(() => {
     if (!sample) return null;
@@ -166,19 +212,52 @@ export default function Studio() {
       words: words.length,
       types: new Set(words.map((w) => w.toLowerCase())).size,
       mazePct: withMazes.length ? Math.round((mazeWords / withMazes.length) * 1000) / 10 : 0,
-      mlu: targetLines.length
-        ? Math.round((words.length / targetLines.length) * 100) / 100
-        : 0,
+      mlu: targetLines.length ? Math.round((words.length / targetLines.length) * 100) / 100 : 0,
     };
   }, [draft, pack, sample]);
 
-  async function handleAudioUpload(file: File) {
+  async function attachAudio(blob: Blob, label: string) {
     if (!sample) return;
-    const key = `${sample.id}`;
-    await saveAudio(key, file);
+    // A new key per attachment, so replacing audio reloads the waveform.
+    const key = `${sample.id}-${Date.now().toString(36)}`;
+    await saveAudio(key, blob);
+    if (sample.audioKey) await deleteAudio(sample.audioKey);
     updateSample(sample.id, { audioKey: key });
-    log("attach_audio", `Attached audio "${file.name}" to "${sample.title}". Stored in this browser only.`);
+    log("attach_audio", `Attached ${label} to "${sample.title}". Stored in this browser only.`);
   }
+
+  async function startRecording() {
+    setRecError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        void attachAudio(blob, "a live recording");
+        setRecording(false);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecSeconds(0);
+      setRecording(true);
+    } catch {
+      setRecError("The browser did not allow microphone access. Check the site permission and try again.");
+    }
+  }
+
+  useEffect(() => {
+    if (!recording) return;
+    const t = setInterval(() => setRecSeconds((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [recording]);
+
+  // Stop the microphone if the clinician navigates away mid-recording.
+  useEffect(() => () => {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+  }, []);
 
   async function runAsr() {
     if (!sample?.audioKey) return;
@@ -190,11 +269,7 @@ export default function Studio() {
       if (!blob) throw new Error("The audio for this sample is no longer in this browser.");
 
       const result = await service.asr(blob, sample.language);
-      log(
-        "asr",
-        `Speech recognition drafted ${result.segments.length} segment(s) using ${service.label}.`,
-        service.external,
-      );
+      log("asr", `Speech recognition drafted ${result.segments.length} segment(s) using ${service.label}.`, service.external);
 
       const targetCode = sample.speakers.find((s) => s.isTarget)?.code ?? "C";
       const lines = formatDraftLines(result.segments, targetCode);
@@ -223,321 +298,321 @@ export default function Studio() {
     );
   }
 
-  if (!sample) {
-    return (
-      <EmptyState />
-    );
-  }
+  if (!sample) return <EmptyState />;
 
-  const set = analysisSet(sample);
+  const isIndic = pack.script !== "Latin";
+  const n = liveCounts?.utterances ?? 0;
+  const remaining = Math.max(0, MIN_SET - n);
+  const saveStatus = dirty
+    ? "Unsaved changes · saving shortly"
+    : savedAt
+      ? `Saved ${Math.max(1, Math.round((Date.now() - savedAt) / 1000))} s ago`
+      : "All changes saved";
 
   return (
-    <div className="space-y-5">
-      {/* --- header ------------------------------------------------------- */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <input
-            className="input"
-            style={{ fontSize: "1.15rem", fontWeight: 600, border: "1px solid transparent", background: "transparent", padding: "0.1rem 0.2rem" }}
-            value={sample.title}
-            onChange={(e) => updateSample(sample.id, { title: e.target.value })}
-            aria-label="Sample title"
-          />
-          <p className="mt-0.5 px-0.5 text-sm" style={{ color: "var(--text-muted)" }}>
-            {pack.name} · {pack.script} script · {sample.elicitationContext.replace(/_/g, " ")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="select"
-            style={{ width: "auto" }}
-            value={sample.language}
-            onChange={(e) => updateSample(sample.id, { language: e.target.value as Bcp47 })}
-            aria-label="Sample language"
-          >
-            {SUPPORTED_LANGUAGES.map((l) => (
-              <option key={l.id} value={l.id}>{l.label}</option>
-            ))}
-          </select>
-          <Link href="/analyse" className="btn btn-primary no-underline" onClick={commitDraft}>
-            Analyse
-          </Link>
-        </div>
-      </div>
-
-      {/* --- live counts --------------------------------------------------- */}
-      {liveCounts && (
-        <div className="card grid grid-cols-2 divide-x sm:grid-cols-5" style={{ borderColor: "var(--border)" }}>
-          <Stat label="Utterances" value={liveCounts.utterances} hint={liveCounts.utterances < 50 ? "below 50" : "at convention"} />
-          <Stat label="Words" value={liveCounts.words} />
-          <Stat label="Different words" value={liveCounts.types} />
-          <Stat label="MLU-w" value={liveCounts.mlu} />
-          <Stat label="Maze %" value={liveCounts.mazePct} />
-        </div>
-      )}
-
-      {/* --- audio --------------------------------------------------------- */}
-      <section className="card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Media</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="btn" style={{ cursor: "pointer" }}>
-              {sample.audioKey ? "Replace audio" : "Attach audio"}
-              <input
-                type="file"
-                accept="audio/*,video/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleAudioUpload(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-            {sample.audioKey && (
-              <>
-                {!cloud.sidecarEnabled && (cloud.asrEngine ?? "whisper") === "whisper" && (
-                  <select
-                    className="select"
-                    style={{ width: "auto" }}
-                    value={whisperSize}
-                    disabled={asrState.busy}
-                    onChange={(e) => setCloud({ whisperModel: e.target.value as WhisperSize })}
-                    aria-label="Speech model size"
-                    title="In-browser Whisper model. Downloaded once, then cached by the browser."
-                  >
-                    {(Object.keys(WHISPER_MODELS) as WhisperSize[]).map((k) => (
-                      <option key={k} value={k}>{WHISPER_MODELS[k].label}</option>
-                    ))}
-                  </select>
-                )}
-                <button className="btn btn-primary" disabled={asrState.busy} onClick={() => void runAsr()}>
-                  {asrState.busy ? "Drafting…" : "Draft with speech recognition"}
-                </button>
-                <button
-                  className="btn"
-                  onClick={async () => {
-                    await deleteAudio(sample.audioKey!);
-                    updateSample(sample.id, { audioKey: undefined });
-                    log("delete_audio", `Deleted the audio for "${sample.title}". The transcript was kept.`);
-                  }}
-                >
-                  Delete audio
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {sample.audioKey ? (
-          <div className="mt-3 space-y-2">
-            <Waveform
-              peaks={peaks}
-              duration={duration}
-              position={position}
-              onSeek={(s) => {
-                if (audioRef.current) audioRef.current.currentTime = s;
-                setPosition(s);
-              }}
-            />
-            <audio
-              ref={audioRef}
-              src={audioUrl ?? undefined}
-              onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
-              onLoadedMetadata={(e) => {
-                if (!duration) setDuration(e.currentTarget.duration);
-              }}
-              className="hidden"
-            />
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <button
-                className="btn"
-                onClick={() => {
-                  const el = audioRef.current;
-                  if (!el) return;
-                  if (el.paused) void el.play();
-                  else el.pause();
-                }}
-              >
-                Play / pause
-              </button>
-              <span className="mono" style={{ color: "var(--text-muted)" }}>
-                {formatTime(position)} / {formatTime(duration)}
-              </span>
-              <label className="ml-2 flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-                Speed
-                <select
-                  className="select"
-                  style={{ width: "auto", padding: "0.15rem 0.4rem" }}
-                  value={rate}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setRate(value);
-                    if (audioRef.current) audioRef.current.playbackRate = value;
-                  }}
-                >
-                  {[0.5, 0.75, 1, 1.25, 1.5].map((r) => (
-                    <option key={r} value={r}>{r}×</option>
-                  ))}
-                </select>
-              </label>
-              <button
-                className="btn"
-                onClick={() => {
-                  if (duration) updateSample(sample.id, { elapsedSeconds: Math.round(duration) });
-                }}
-                title="Use the recording length as the sample's elapsed time, enabling rate measures."
-              >
-                Set elapsed time from audio
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Audio is optional. Every measure ULASA reports can be computed from a typed transcript.
-            Attaching audio adds waveform navigation and a speech-recognition draft (Whisper running in
-            this browser by default). Audio is stored in this browser and is never uploaded.
-          </p>
-        )}
-
-        {asrState.busy && (
-          <div className="mt-3 space-y-1.5" role="status" aria-live="polite">
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {asrProgress?.stage === "downloading"
-                ? `Downloading speech model (first use only, then cached)… ${asrProgress.percent ?? 0}%`
-                : asrProgress?.stage === "loading"
-                  ? "Loading speech model…"
-                  : asrProgress?.stage === "transcribing"
-                    ? `Transcribing on this device${asrProgress.device ? ` (${asrProgress.device})` : ""}… long recordings take a while.`
-                    : "Preparing audio…"}
-            </p>
-            <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  background: "var(--accent)",
-                  width: `${asrProgress?.stage === "downloading" ? asrProgress.percent ?? 2 : asrProgress?.stage === "transcribing" || asrProgress?.stage === "loading" ? 100 : 5}%`,
-                  opacity: asrProgress?.stage === "transcribing" ? 0.5 : 1,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {asrDraftNote && (
-          <div className="notice notice-warn mt-3">
-            <strong>Draft — check before analysis.</strong> {asrDraftNote}{" "}
-            <button type="button" className="underline" onClick={() => setAsrDraftNote(null)}>Dismiss</button>
-          </div>
-        )}
-
-        {asrState.message && (
-          <div className="notice notice-warn mt-3">{asrState.message}</div>
-        )}
-      </section>
-
-      {/* --- elapsed time -------------------------------------------------- */}
-      {!sample.elapsedSeconds && (
-        <div className="notice notice-warn">
-          No elapsed time is set, so words and utterances per minute cannot be computed.{" "}
-          <label className="ml-1 inline-flex items-center gap-1.5">
-            Sample duration (mm:ss)
-            <input
-              className="input mono"
-              style={{ width: "6rem", display: "inline-block" }}
-              placeholder="10:00"
-              onBlur={(e) => {
-                const match = e.target.value.match(/^(\d+):(\d{1,2})$/);
-                if (match) {
-                  updateSample(sample.id, {
-                    elapsedSeconds: Number(match[1]) * 60 + Number(match[2]),
-                  });
-                }
-              }}
-            />
-          </label>
-        </div>
-      )}
-
-      {/* --- view switch --------------------------------------------------- */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1 rounded-lg p-0.5" style={{ background: "var(--surface-2)" }}>
-          {(["transcript", "coding"] as const).map((v) => (
-            <button
-              key={v}
-              className="rounded-md px-3 py-1 text-sm"
-              style={{
-                fontWeight: view === v ? 600 : 450,
-                background: view === v ? "var(--surface)" : "transparent",
-                color: view === v ? "var(--text)" : "var(--text-muted)",
-              }}
-              onClick={() => {
-                if (view === "transcript") commitDraft();
-                setView(v);
-              }}
-            >
-              {v === "transcript" ? "Transcript" : "Coding"}
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="seg max-w-full self-start overflow-x-auto" role="group" aria-label="Input method">
+          {INPUT_METHODS.map((m) => (
+            <button key={m.id} type="button" className="seg-btn" aria-pressed={method === m.id} onClick={() => setMethod(m.id as InputMethod)}>
+              {m.label}
             </button>
           ))}
         </div>
-        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {dirty ? "Unsaved changes — saving shortly…" : `${set.length} utterances in the analysis set`}
-        </span>
-        {dirty && (
-          <button className="btn" style={{ padding: "0.15rem 0.5rem", fontSize: "0.8rem" }} onClick={commitDraft}>
-            Save now
-          </button>
-        )}
-      </div>
 
-      {view === "transcript" ? (
-        <TranscriptView
+        {/* --- media ------------------------------------------------------ */}
+        <section className="panel flex flex-col gap-3 px-[18px] py-4" aria-label="Media">
+          {method === "import" ? (
+            <>
+              <Dropzone onFiles={(files) => void importFiles(files, { caseId: sample.caseId, language: sample.language }).then(setImportNotes)} />
+              <p className="m-0" style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Each imported file becomes a new sample under case {sample.caseId === "unassigned" ? "“unassigned”" : sample.caseId}.
+                CHAT headers are mapped to speakers; dependent tiers such as %mor are kept but not scored.
+              </p>
+              {importNotes.length > 0 && (
+                <ul className="notice notice-warn m-0 list-disc pl-8" style={{ fontSize: 13 }}>
+                  {importNotes.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full border-0"
+                    style={{ background: sample.audioKey ? "var(--accent)" : "var(--surface-2)", color: "var(--on-accent)", cursor: sample.audioKey ? "pointer" : "not-allowed" }}
+                    aria-label={playing ? "Pause" : "Play"}
+                    disabled={!sample.audioKey}
+                    onClick={() => {
+                      const el = audioRef.current;
+                      if (!el) return;
+                      if (el.paused) void el.play();
+                      else el.pause();
+                    }}
+                  >
+                    {playing ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z" /></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill={sample.audioKey ? "currentColor" : "var(--text-muted)"} aria-hidden="true"><path d="M7 4v16l13-8z" /></svg>
+                    )}
+                  </button>
+                  <div className="flex flex-col" style={{ lineHeight: 1.3 }}>
+                    <span className="font-semibold" style={{ fontSize: 14 }}>
+                      {recording ? `Recording · ${formatTime(recSeconds)}` : sample.audioKey ? "Attached audio" : "No audio attached"}
+                    </span>
+                    {sample.audioKey && (
+                      <span className="mono" style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        {formatTime(position)} / {formatTime(duration)} · {rate}×
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {method === "audio" && (
+                    <label className="btn" style={{ cursor: "pointer", fontSize: 13.5, padding: "7px 12px" }}>
+                      {sample.audioKey ? "Replace audio" : "Upload audio"}
+                      <input
+                        type="file"
+                        accept="audio/*,video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void attachAudio(file, `audio "${file.name}"`);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
+                  {method === "record" && (
+                    <button type="button" className={recording ? "btn btn-danger" : "btn"} style={{ fontSize: 13.5, padding: "7px 12px" }} onClick={() => (recording ? recorderRef.current?.stop() : void startRecording())}>
+                      {recording ? "Stop and attach" : sample.audioKey ? "Record again" : "Start recording"}
+                    </button>
+                  )}
+                  {sample.audioKey && (
+                    <>
+                      {!cloud.sidecarEnabled && (cloud.asrEngine ?? "whisper") === "whisper" && (
+                        <select
+                          className="select"
+                          style={{ width: "auto", fontSize: 13.5, padding: "6px 10px" }}
+                          value={whisperSize}
+                          disabled={asrState.busy}
+                          onChange={(e) => setCloud({ whisperModel: e.target.value as WhisperSize })}
+                          aria-label="Speech model size"
+                          title="In-browser Whisper model. Downloaded once, then cached by the browser."
+                        >
+                          {(Object.keys(WHISPER_MODELS) as WhisperSize[]).map((k) => (
+                            <option key={k} value={k}>{WHISPER_MODELS[k].label}</option>
+                          ))}
+                        </select>
+                      )}
+                      <button type="button" className="btn" style={{ fontSize: 13.5, padding: "7px 12px" }} disabled={asrState.busy} onClick={() => void runAsr()}>
+                        {asrState.busy ? "Drafting…" : "Draft with speech recognition"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: 13.5, padding: "7px 12px" }}
+                        title="Use the recording length as the sample's elapsed time, enabling rate measures."
+                        onClick={() => duration && updateSample(sample.id, { elapsedSeconds: Math.round(duration) })}
+                      >
+                        Set elapsed time from audio
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {sample.audioKey && (
+                <>
+                  <Waveform
+                    peaks={peaks}
+                    duration={duration}
+                    position={position}
+                    height={56}
+                    onSeek={(s) => {
+                      if (audioRef.current) audioRef.current.currentTime = s;
+                      setPosition(s);
+                    }}
+                  />
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl ?? undefined}
+                    onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => setPlaying(false)}
+                    onLoadedMetadata={(e) => {
+                      if (!duration) setDuration(e.currentTarget.duration);
+                      e.currentTarget.playbackRate = rate;
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex flex-wrap items-center gap-3" style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                    <label className="flex items-center gap-1.5">
+                      Speed
+                      <select
+                        className="select"
+                        style={{ width: "auto", padding: "2px 6px", fontSize: 12.5 }}
+                        value={rate}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          setRate(value);
+                          if (audioRef.current) audioRef.current.playbackRate = value;
+                        }}
+                      >
+                        {[0.5, 0.75, 1, 1.25, 1.5].map((r) => <option key={r} value={r}>{r}×</option>)}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      style={{ fontSize: 12.5, color: "var(--danger-text)" }}
+                      onClick={async () => {
+                        await deleteAudio(sample.audioKey!);
+                        updateSample(sample.id, { audioKey: undefined });
+                        log("delete_audio", `Deleted the audio for "${sample.title}". The transcript was kept.`);
+                      }}
+                    >
+                      Delete audio (keeps the transcript)
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <p className="m-0" style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                {method === "type" && "Audio is optional. Every measure can be computed from a typed transcript."}
+                {method === "audio" && `Stored in IndexedDB on this device. Speech recognition runs Whisper in this browser by default (or the local sidecar if enabled in Settings); ${pack.name} output is a draft to correct.`}
+                {method === "record" && "Recording to this browser. Stop to attach it to the sample. Nothing is uploaded."}
+              </p>
+              {recError && <div className="notice notice-warn">{recError}</div>}
+            </>
+          )}
+          {asrState.busy && (
+            <div className="flex flex-col gap-1.5" role="status" aria-live="polite">
+              <p className="m-0" style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                {asrProgress?.stage === "downloading"
+                  ? `Downloading speech model (first use only, then cached)… ${asrProgress.percent ?? 0}%`
+                  : asrProgress?.stage === "loading"
+                    ? "Loading speech model…"
+                    : asrProgress?.stage === "transcribing"
+                      ? `Transcribing on this device${asrProgress.device ? ` (${asrProgress.device})` : ""}… long recordings take a while.`
+                      : "Preparing audio…"}
+              </p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    background: "var(--accent)",
+                    width: `${asrProgress?.stage === "downloading" ? asrProgress.percent ?? 2 : asrProgress?.stage === "transcribing" || asrProgress?.stage === "loading" ? 100 : 5}%`,
+                    opacity: asrProgress?.stage === "transcribing" ? 0.5 : 1,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          {asrDraftNote && (
+            <div className="notice notice-warn" style={{ fontSize: 13.5 }}>
+              <strong>Draft — check before analysis.</strong> {asrDraftNote}{" "}
+              <button type="button" className="link-btn underline" onClick={() => setAsrDraftNote(null)}>Dismiss</button>
+            </div>
+          )}
+          {asrState.message && <div className="notice notice-warn">{asrState.message}</div>}
+        </section>
+
+        {/* --- editor ----------------------------------------------------- */}
+        <TranscriptEditor
           draft={draft}
           onChange={(value) => {
             setDraft(value);
             setDirty(true);
           }}
-          scriptClass={pack.script === "Latin" ? "" : "indic"}
-          speakerCodes={sample.speakers.map((s) => `${s.code} — ${s.role}${s.isTarget ? " (target)" : ""}`)}
+          isIndic={isIndic}
+          packName={pack.name}
           fillers={pack.mazeFillers}
+          speakerCodes={sample.speakers.map((s) => `${s.code} = ${s.role}${s.isTarget ? " (target)" : ""}`).join(" · ")}
+          status={saveStatus}
+          onSaveNow={dirty ? commitDraft : undefined}
         />
-      ) : (
-        <CodingView sampleId={sample.id} />
-      )}
+      </div>
 
-      <ConventionHelp />
+      {/* --- right rail --------------------------------------------------- */}
+      <aside className="flex flex-col gap-4">
+        <section className="panel flex flex-col gap-3.5 p-[18px]" aria-label="Live counts">
+          <span className="caps">Live counts · {sample.speakers.find((s) => s.isTarget)?.role ?? "target"}</span>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between">
+              <span style={{ fontSize: 13.5, color: "var(--text-muted)" }}>Utterances</span>
+              <span className="tnum font-semibold" style={{ fontSize: 26 }}>
+                {n}
+                <span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)" }}> / {MIN_SET}</span>
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }} role="progressbar" aria-valuenow={n} aria-valuemin={0} aria-valuemax={MIN_SET} aria-label="Utterances towards the 50-utterance convention">
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, (n / MIN_SET) * 100)}%`, background: remaining > 0 ? "var(--saffron)" : "var(--accent)" }} />
+            </div>
+            <span style={{ fontSize: 12, color: remaining > 0 ? "var(--warn-text)" : "var(--text-muted)" }}>
+              {remaining > 0 ? `${remaining} more to reach the 50-utterance convention` : "At or above the 50-utterance convention"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg" style={{ background: "var(--surface-2)" }}>
+            {[
+              ["Words", liveCounts?.words ?? 0],
+              ["Different words", liveCounts?.types ?? 0],
+              ["MLU-w", (liveCounts?.mlu ?? 0).toFixed(2)],
+              ["Maze words", `${liveCounts?.mazePct ?? 0}%`],
+            ].map(([label, value], i) => (
+              <div key={label as string} className={`py-2.5 ${i % 2 ? "pl-3" : ""}`} style={{ background: "var(--surface)" }}>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</div>
+                <div className="tnum font-semibold" style={{ fontSize: 19 }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <SampleDetails />
+
+        <section className="panel flex flex-col gap-2.5 p-[18px]" aria-label="Conventions">
+          <span className="caps">Conventions</span>
+          {CONVENTIONS.map(([s, m]) => (
+            <div key={s} className="grid grid-cols-[86px_1fr] gap-2.5" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+              <code className="mono font-medium" style={{ color: "var(--accent-text)" }}>{s}</code>
+              <span style={{ color: "var(--text-muted)" }}>{m}</span>
+            </div>
+          ))}
+          <span className="border-t pt-2" style={{ fontSize: 12, color: "var(--text-muted)", borderColor: "var(--surface-2)" }}>
+            SALT conventions, so a SALT transcript pastes in unchanged.
+          </span>
+        </section>
+      </aside>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
 
-function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
-  return (
-    <div className="px-3 py-2.5" style={{ borderColor: "var(--border)" }}>
-      <div className="text-xs" style={{ color: "var(--text-muted)" }}>{label}</div>
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
-      {hint && <div className="text-xs" style={{ color: "var(--text-muted)" }}>{hint}</div>}
-    </div>
-  );
-}
-
-function TranscriptView({
+function TranscriptEditor({
   draft,
   onChange,
-  scriptClass,
-  speakerCodes,
+  isIndic,
+  packName,
   fillers,
+  speakerCodes,
+  status,
+  onSaveNow,
 }: {
   draft: string;
   onChange: (value: string) => void;
-  scriptClass: string;
-  speakerCodes: string[];
+  isIndic: boolean;
+  packName: string;
   fillers: string[];
+  speakerCodes: string;
+  status: string;
+  onSaveNow?: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  function wrapSelection(before: string, after: string) {
+  function apply(before: string, after = "") {
     const el = ref.current;
     if (!el) return;
     const { selectionStart: start, selectionEnd: end, value } = el;
@@ -545,236 +620,119 @@ function TranscriptView({
     onChange(next);
     requestAnimationFrame(() => {
       el.focus();
-      el.setSelectionRange(start + before.length, end + before.length);
-    });
-  }
-
-  function insert(text: string) {
-    const el = ref.current;
-    if (!el) return;
-    const { selectionStart: start, selectionEnd: end, value } = el;
-    onChange(value.slice(0, start) + text + value.slice(end));
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + text.length, start + text.length);
+      // Wrapping keeps the wrapped text selected; inserting leaves the caret after it.
+      if (after) el.setSelectionRange(start + before.length, end + before.length);
+      else el.setSelectionRange(start + before.length, start + before.length);
     });
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Mark:</span>
-        <ToolButton onClick={() => wrapSelection("(", ")")} title="Wrap the selection as a maze (repetition, revision, filled pause or false start)">
-          Maze ( )
-        </ToolButton>
-        <ToolButton onClick={() => insert("X")} title="Unintelligible word">Unintelligible X</ToolButton>
-        <ToolButton onClick={() => insert("*")} title="Mark the next word as omitted">Omission *</ToolButton>
-        <ToolButton onClick={() => wrapSelection("[", "]")} title="Attach an error or descriptive code">Code [ ]</ToolButton>
-        <ToolButton onClick={() => insert("(:2.0)")} title="Silent pause in seconds">Pause (:2.0)</ToolButton>
-        <ToolButton onClick={() => insert("/")} title="Bound-morpheme split; the surface spelling is preserved">Morpheme /</ToolButton>
+    <section className="panel flex flex-col overflow-hidden" aria-label="Transcript editor">
+      <div className="flex flex-wrap items-center gap-1.5 border-b px-3.5 py-2.5" style={{ borderColor: "var(--border)", background: "var(--bg)" }}>
+        <span className="mr-1 font-semibold" style={{ fontSize: 12, color: "var(--text-muted)" }}>Mark</span>
+        {MARKS.map((k) => (
+          <button
+            key={k.label}
+            type="button"
+            title={k.tip}
+            aria-label={k.tip}
+            className="mark-btn mono"
+            onClick={() => (k.wrap ? apply(k.wrap[0], k.wrap[1]) : apply(k.insert!))}
+          >
+            {k.label}
+          </button>
+        ))}
+        {fillers.length > 0 && (
+          <>
+            <span className="mx-1.5 h-[18px] w-px" style={{ background: "var(--border)" }} aria-hidden="true" />
+            <span className="mr-1 font-semibold" style={{ fontSize: 12, color: "var(--text-muted)" }}>{packName} fillers</span>
+            {fillers.slice(0, 6).map((f) => (
+              <button key={f} type="button" className="filler-btn" title={`Insert "${f}" as a filled pause`} onClick={() => apply(`(${f}) `)}>
+                {f}
+              </button>
+            ))}
+          </>
+        )}
       </div>
-
-      {fillers.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Fillers in this language:</span>
-          {fillers.slice(0, 10).map((f) => (
-            <ToolButton key={f} onClick={() => insert(`(${f}) `)} title={`Insert "${f}" as a filled pause`}>
-              {f}
-            </ToolButton>
-          ))}
-        </div>
-      )}
-
       <textarea
         ref={ref}
-        className={`textarea mono ${scriptClass}`}
-        style={{ minHeight: "26rem", fontSize: "0.95rem", lineHeight: 1.9 }}
+        className={`mono ${isIndic ? "indic" : ""}`}
+        style={{ border: 0, resize: "vertical", minHeight: 470, padding: "14px 18px", fontSize: 15, lineHeight: 1.95, color: "var(--text)", background: "var(--surface)", outline: "none" }}
         value={draft}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
         aria-label="Transcript"
-        placeholder={"C  I go to school in the bus.\nE  Who do you sit with?\nC  My friend (si) sits with me."}
+        placeholder={"C I go to school in the bus.\nE Who do you sit with?\nC My friend (si) sits with me."}
       />
-
-      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-        One utterance per line, beginning with a speaker code. Codes in this sample:{" "}
-        {speakerCodes.join(" · ")}
-      </p>
-    </div>
-  );
-}
-
-function ToolButton({ children, onClick, title }: { children: React.ReactNode; onClick: () => void; title: string }) {
-  return (
-    <button className="btn" style={{ padding: "0.15rem 0.5rem", fontSize: "0.78rem" }} onClick={onClick} title={title}>
-      {children}
-    </button>
-  );
-}
-
-function CodingView({ sampleId }: { sampleId: string }) {
-  const sample = useStore((s) => s.samples.find((x) => x.id === sampleId))!;
-  const replaceUtterances = useStore((s) => s.replaceUtterances);
-  const pack = getPack(sample.language);
-
-  function patch(id: string, changes: Partial<Utterance>) {
-    replaceUtterances(
-      sampleId,
-      sample.utterances.map((u) => (u.id === id ? { ...u, ...changes } : u)),
-    );
-  }
-
-  const target = sample.speakers.find((s) => s.isTarget);
-
-  if (sample.utterances.length === 0) {
-    return (
-      <div className="card p-6 text-center" style={{ color: "var(--text-muted)" }}>
-        Nothing to code yet. Type a transcript first.
+      <div className="flex flex-wrap justify-between gap-2 border-t px-4 py-[9px]" style={{ borderColor: "var(--border)", fontSize: 12, color: "var(--text-muted)" }}>
+        <span>One utterance per line, starting with a speaker code. {speakerCodes}</span>
+        <span className="flex items-center gap-2" aria-live="polite">
+          {status}
+          {onSaveNow && <button type="button" className="link-btn" style={{ fontSize: 12 }} onClick={onSaveNow}>Save now</button>}
+        </span>
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-        Only the target speaker&apos;s utterances are scored. Marking grammaticality here is what
-        enables the PGU measure; clause overrides replace the heuristic clause count.
-      </p>
-      <div className="space-y-1.5">
-        {sample.utterances.map((u) => {
-          const speaker = sample.speakers.find((s) => s.id === u.speakerId);
-          const isTarget = speaker?.id === target?.id;
-          return (
-            <div
-              key={u.id}
-              className="card p-3"
-              style={{ opacity: isTarget ? 1 : 0.62, borderColor: "var(--border)" }}
-            >
-              <div className="flex flex-wrap items-start gap-3">
-                <span className="mono text-xs" style={{ color: "var(--text-muted)", minWidth: "1.8rem" }}>
-                  {speaker?.code}
-                </span>
-                <p className={`flex-1 ${pack.script === "Latin" ? "" : "indic"}`} style={{ minWidth: "14rem" }}>
-                  {u.text}
-                </p>
-              </div>
-
-              {isTarget && (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <label className="flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
-                    Grammatical
-                    <select
-                      className="select"
-                      style={{ width: "auto", padding: "0.1rem 0.35rem", fontSize: "0.78rem" }}
-                      value={u.grammaticality}
-                      onChange={(e) => patch(u.id, { grammaticality: e.target.value as Utterance["grammaticality"] })}
-                    >
-                      <option value="unmarked">not marked</option>
-                      <option value="grammatical">grammatical</option>
-                      <option value="ungrammatical">ungrammatical</option>
-                    </select>
-                  </label>
-
-                  <label className="flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
-                    Clauses
-                    <input
-                      className="input mono"
-                      style={{ width: "3.4rem", padding: "0.1rem 0.35rem", fontSize: "0.78rem" }}
-                      type="number"
-                      min={0}
-                      placeholder={String(estimateClauses(u, pack))}
-                      value={u.clauseCountOverride ?? ""}
-                      onChange={(e) =>
-                        patch(u.id, {
-                          clauseCountOverride: e.target.value === "" ? undefined : Number(e.target.value),
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label className="flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(u.isAbandoned)}
-                      onChange={(e) => patch(u.id, { isAbandoned: e.target.checked })}
-                    />
-                    abandoned
-                  </label>
-
-                  <select
-                    className="select"
-                    style={{ width: "auto", padding: "0.1rem 0.35rem", fontSize: "0.78rem" }}
-                    value=""
-                    onChange={(e) => {
-                      if (!e.target.value) return;
-                      patch(u.id, { codes: [...new Set([...(u.codes ?? []), e.target.value])] });
-                    }}
-                  >
-                    <option value="">add {pack.name} error code…</option>
-                    {pack.errorTaxonomy.map((err) => (
-                      <option key={err.code} value={err.code}>
-                        {err.code} — {err.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {(u.codes ?? []).map((code) => (
-                    <button
-                      key={code}
-                      className="badge badge-experimental"
-                      title="Remove this code"
-                      onClick={() => patch(u.id, { codes: (u.codes ?? []).filter((c) => c !== code) })}
-                    >
-                      {code} ×
-                    </button>
-                  ))}
-
-                  {u.intelligibility !== "intelligible" && (
-                    <span className="badge badge-unavailable">{u.intelligibility}</span>
-                  )}
-                  {u.mazes.length > 0 && (
-                    <span className="badge badge-unavailable">
-                      {u.mazes.length} maze{u.mazes.length === 1 ? "" : "s"}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    </section>
   );
 }
 
-function ConventionHelp() {
-  return (
-    <details className="card p-4">
-      <summary className="cursor-pointer text-sm font-semibold">Transcription conventions</summary>
-      <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-        <Convention symbol="C  text" meaning="Speaker code at the start of the line, then the utterance." />
-        <Convention symbol="(word word)" meaning="A maze. ULASA classifies it as a repetition, revision, filled pause or false start, and excludes it from word counts." />
-        <Convention symbol="X  XX  XXX" meaning="Unintelligible: one word, two words, an unintelligible run." />
-        <Convention symbol="*word" meaning="A word the clinician judged should have been present but was omitted." />
-        <Convention symbol="word/morpheme" meaning="Bound-morpheme split. The surface spelling is never rewritten; the split is stored alongside it." />
-        <Convention symbol="[E:CASE]" meaning="An error code from the active language pack, or any code you choose." />
-        <Convention symbol="(:2.5)" meaning="A silent pause of 2.5 seconds." />
-        <Convention symbol="+note" meaning="A clinician comment, excluded from every count." />
-      </div>
-      <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-        These are SALT&apos;s conventions plus the pause and comment forms, so a transcript typed in
-        SALT can be pasted here unchanged.
-      </p>
-    </details>
-  );
-}
+function SampleDetails() {
+  const sample = useActiveSample()!;
+  const updateSample = useStore((s) => s.updateSample);
+  const [durationText, setDurationText] = useState(formatDuration(sample.elapsedSeconds) ?? "");
 
-function Convention({ symbol, meaning }: { symbol: string; meaning: string }) {
+  useEffect(() => setDurationText(formatDuration(sample.elapsedSeconds) ?? ""), [sample.elapsedSeconds]);
+
+  const labelStyle: React.CSSProperties = { fontSize: 12.5, color: "var(--text-muted)" };
   return (
-    <div>
-      <code className="mono" style={{ color: "var(--accent-text)" }}>{symbol}</code>
-      <p style={{ color: "var(--text-muted)" }}>{meaning}</p>
-    </div>
+    <section className="panel flex flex-col gap-3 p-[18px]" aria-label="Sample details">
+      <span className="caps">Sample</span>
+      <label className="flex flex-col gap-1 font-medium" style={labelStyle}>
+        Title
+        <input className="input" style={{ fontSize: 14 }} value={sample.title} onChange={(e) => updateSample(sample.id, { title: e.target.value })} />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1 font-medium" style={labelStyle}>
+          Case ID
+          <input
+            className="input"
+            style={{ fontSize: 14 }}
+            value={sample.caseId === "unassigned" ? "" : sample.caseId}
+            placeholder="unassigned"
+            onChange={(e) => updateSample(sample.id, { caseId: e.target.value.trim() ? e.target.value : "unassigned" })}
+          />
+        </label>
+        <label className="flex flex-col gap-1 font-medium" style={labelStyle}>
+          Duration (mm:ss)
+          <input
+            className="input mono"
+            style={{ fontSize: 14 }}
+            placeholder="10:00"
+            value={durationText}
+            onChange={(e) => setDurationText(e.target.value)}
+            onBlur={() => {
+              const match = durationText.trim().match(/^(\d+):(\d{1,2})$/);
+              if (match) updateSample(sample.id, { elapsedSeconds: Number(match[1]) * 60 + Number(match[2]) });
+              else if (!durationText.trim()) updateSample(sample.id, { elapsedSeconds: undefined });
+            }}
+          />
+        </label>
+      </div>
+      <label className="flex flex-col gap-1 font-medium" style={labelStyle}>
+        Language pack
+        <select className="select" style={{ fontSize: 14 }} value={sample.language} onChange={(e) => updateSample(sample.id, { language: e.target.value as Bcp47 })}>
+          {SUPPORTED_LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 font-medium" style={labelStyle}>
+        Elicitation context
+        <select className="select" style={{ fontSize: 14 }} value={sample.elicitationContext} onChange={(e) => updateSample(sample.id, { elicitationContext: e.target.value as ElicitationContext })}>
+          {Object.entries(CONTEXT_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+        </select>
+      </label>
+      {!sample.elapsedSeconds && (
+        <span style={{ fontSize: 12, color: "var(--warn-text)" }}>No duration yet, so words and utterances per minute stay unavailable.</span>
+      )}
+    </section>
   );
 }
 
@@ -783,10 +741,10 @@ function EmptyState() {
     <div className="card p-8 text-center">
       <h1 className="text-lg font-semibold">No sample selected</h1>
       <p className="mt-1.5 text-sm" style={{ color: "var(--text-muted)" }}>
-        Choose a sample on the dashboard, or create a new one.
+        Choose a sample on Home, or create a new one.
       </p>
       <Link href="/" className="btn btn-primary mt-4 no-underline">
-        Go to the dashboard
+        Go to Home
       </Link>
     </div>
   );

@@ -1,5 +1,6 @@
 import type {
   AnalysisResult,
+  MeasureEvidence,
   MeasureGroup,
   MeasureValue,
   Sample,
@@ -507,6 +508,8 @@ export function analyseSample(sample: Sample): AnalysisResult {
     },
   ];
 
+  attachEvidence(groups, buildEvidence(sample, all, set, pack));
+
   return {
     sampleId: sample.id,
     language: sample.language,
@@ -561,6 +564,100 @@ function mluMorphemes(
       : `EXPERIMENTAL. ${pack.name} has no published clinical morpheme-counting protocol comparable to Brown's for English. This figure reflects the splits you entered and is not comparable to published English MLU-m norms.`;
 
   return m("mlu_m", "MLU in morphemes", round(mlu(morphemeCounts)), "morphemes/utterance", status, note);
+}
+
+// ---------------------------------------------------------------------------
+// Evidence: which utterances and tokens each measure was computed from
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the evidence lists from the same predicates the measures above use,
+ * so a highlighted token is always one that was counted. Nothing here changes
+ * a value; it only records where the value came from.
+ */
+function buildEvidence(
+  sample: Sample,
+  all: Utterance[],
+  set: Utterance[],
+  pack: LanguagePack,
+): Record<string, MeasureEvidence[]> {
+  const whole = (us: Utterance[]): MeasureEvidence[] => us.map((u) => ({ utteranceId: u.id }));
+  const tokens = (us: Utterance[], pick: (t: Token, u: Utterance, i: number) => boolean): MeasureEvidence[] =>
+    us.flatMap((u) => {
+      const idx = u.tokens.flatMap((t, i) => (pick(t, u, i) ? [i] : []));
+      return idx.length ? [{ utteranceId: u.id, tokenIdx: idx }] : [];
+    });
+  const inMaze = (kind: string) => (_t: Token, u: Utterance, i: number) =>
+    u.mazes.some((m) => m.kind === kind && i >= m.start && i < m.end);
+  const countable = (t: Token) => !t.isMaze && !t.isUnintelligible && !t.isOmission;
+  const otherLang = (t: Token) => countable(t) && !!t.lang && t.lang !== pack.id;
+
+  const setAll = whole(set);
+  const mazes = tokens(set, (t) => !!t.isMaze && !t.isUnintelligible);
+  const mix = tokens(set, otherLang);
+  const verbs = tokens(set, (t) => countable(t) && isVerb(t, pack));
+  const errorTokens = (t: Token) => (t.errorCodes?.length ?? 0) > 0 || !!t.isOmission;
+  const withErrors = set.filter(
+    (u) => (u.codes ?? []).some((c) => c.startsWith("E")) || u.tokens.some(errorTokens),
+  );
+  const targetId = sample.speakers.find((s) => s.isTarget)?.id;
+  const questions = sample.utterances.filter(
+    (u) => u.speakerId !== targetId && /[?？]\s*$/.test(u.text.trim()),
+  );
+
+  const ev: Record<string, MeasureEvidence[]> = {
+    total_utterances: whole(all),
+    elapsed: setAll,
+    pct_intelligible_utterances: whole(all.filter((u) => u.intelligibility !== "intelligible")),
+    pct_intelligible_words: tokens(all, (t) => !!t.isUnintelligible),
+    unintelligible_words: tokens(all, (t) => !!t.isUnintelligible),
+    sd_utterance_length: setAll,
+    mean_verbs: verbs,
+    pct_with_verbs: verbs,
+    pgu: whole(set.filter((u) => u.grammaticality !== "unmarked")),
+    maze_pct: mazes,
+    mazes_per_utterance: mazes,
+    maze_repetitions: tokens(set, inMaze("repetition")),
+    maze_revisions: tokens(set, inMaze("revision")),
+    maze_filled_pauses: tokens(set, inMaze("filled_pause")),
+    maze_false_starts: tokens(set, inMaze("false_start")),
+    abandoned: whole(all.filter((u) => u.isAbandoned)),
+    silent_pauses: whole(set.filter((u) => (u.pauses?.length ?? 0) > 0)),
+    mean_pause: whole(set.filter((u) => (u.pauses?.length ?? 0) > 0)),
+    upm: whole(all),
+    examiner_questions: whole(questions),
+    pct_responses: whole(questions),
+    pct_with_errors: withErrors.map((u) => {
+      const idx = u.tokens.flatMap((t, i) => (errorTokens(t) ? [i] : []));
+      return idx.length ? { utteranceId: u.id, tokenIdx: idx } : { utteranceId: u.id };
+    }),
+    omissions: tokens(set, (t) => !!t.isOmission),
+    codemix_ratio: mix,
+    switch_points: mix,
+  };
+  for (const key of [
+    "analysis_set", "ntw", "ntw_with_mazes", "mlu_w", "mlu_m", "clausal_density", "wps",
+    "ndw", "ndw_50", "ttr", "mattr", "mtld", "hdd", "content_ratio", "wpm", "mean_turn_length",
+  ]) {
+    ev[key] = setAll;
+  }
+  // Per-code error counts: the utterances carrying that code.
+  for (const u of set) {
+    const codes = new Set([...(u.codes ?? []), ...u.tokens.flatMap((t) => t.errorCodes ?? [])]);
+    for (const code of codes) (ev[`error_${code}`] ??= []).push({ utteranceId: u.id });
+  }
+  return ev;
+}
+
+/** Attaches evidence to every measure that has a value. Unavailable stays bare. */
+function attachEvidence(groups: MeasureGroup[], ev: Record<string, MeasureEvidence[]>) {
+  for (const group of groups) {
+    for (const measure of group.measures) {
+      if (measure.value === null || measure.status === "unavailable") continue;
+      const list = ev[measure.key];
+      if (list) measure.evidence = list;
+    }
+  }
 }
 
 function countSwitchPoints(utterances: Utterance[], matrix: string): number {

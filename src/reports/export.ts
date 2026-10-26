@@ -30,16 +30,9 @@ import { RUBRICS, scoreRubric, type RubricScores } from "@/core/rubrics";
  * megabytes of font per language.
  */
 
-export function download(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+// Kept in lib/download.ts so pages that only save a file need not load docx.
+import { download } from "@/lib/download";
+export { download };
 
 function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "sample";

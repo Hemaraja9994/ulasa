@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Readable type scale: xs 13px, sm 15px, base 16px. */
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5rem;
+}
+
 /*
  * ULASA visual system.
  *
@@ -118,7 +126,7 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
@@ -157,7 +165,7 @@ body {
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
@@ -203,7 +211,7 @@ body {
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: 1rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -253,7 +261,7 @@ body {
 .notice {
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   border: 1px solid;
 }
 
@@ -272,30 +280,18 @@ body {
 /* --- landing / conference ----------------------------------------------- */
 
 .hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background:
-    radial-gradient(600px 280px at 100% 0%, var(--saffron-soft), transparent 70%),
-    linear-gradient(135deg, var(--hero-from), var(--hero-to));
+  padding: 2.5rem 0 1rem;
 }
 
 .hero-title {
-  font-size: clamp(1.9rem, 4.6vw, 3.1rem);
-  line-height: 1.08;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text);
 }
 
-.hero-title .hl {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-color: var(--saffron);
-  text-decoration-thickness: 0.12em;
-  text-underline-offset: 0.12em;
-}
+.hero-title .hl { color: var(--accent); }
 
 .eyebrow {
   display: inline-flex;

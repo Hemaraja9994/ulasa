@@ -15,10 +15,10 @@ export default function Glossary() {
   }, [q]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Metric glossary</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Metric glossary</h1>
           <p className="mt-0.5 max-w-2xl text-sm" style={{ color: "var(--text-muted)" }}>
             What each number on the Analyse screen means, with the usual source for further reading.
             Transcription conventions follow SALT where noted; see the{" "}

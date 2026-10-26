@@ -96,10 +96,10 @@ export default function Compare() {
   let lastGroup = "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Compare two samples</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Compare two samples</h1>
           <p className="mt-0.5 max-w-2xl text-sm" style={{ color: "var(--text-muted)" }}>
             Side-by-side measures for, e.g., baseline vs. follow-up, or two elicitation contexts. Δ is
             B minus A. Compare like with like: sample length, context and language all move these numbers.
@@ -181,15 +181,15 @@ export default function Compare() {
                         </tr>
                       ) : null,
                       <tr key={r.key} className="border-t" style={{ borderColor: "var(--border)" }}>
-                        <td className="px-4 py-2">
+                        <td className="px-4 py-2.5">
                           <span title={GLOSSARY_BY_KEY[r.key]?.short}>{r.label}</span>
                           {r.unit && <span className="text-xs" style={{ color: "var(--text-muted)" }}> · {r.unit}</span>}
                           {experimental && <span className="badge badge-experimental ml-2">experimental</span>}
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums font-semibold">{fmt(r.a)}</td>
-                        <td className="px-4 py-2 text-right tabular-nums font-semibold">{fmt(r.b)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{fmt(r.a)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{fmt(r.b)}</td>
                         <td
-                          className={`px-4 py-2 text-right tabular-nums ${delta === null || delta === 0 ? "" : delta > 0 ? "delta-up" : "delta-down"}`}
+                          className={`px-4 py-2.5 text-right tabular-nums ${delta === null || delta === 0 ? "" : delta > 0 ? "delta-up" : "delta-down"}`}
                         >
                           {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}
                         </td>

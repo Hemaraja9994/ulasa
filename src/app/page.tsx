@@ -16,17 +16,6 @@ import { FilterChips, FilterChipOption } from "@/components/FilterChips";
 import { exportUlasaJson, exportSalt, exportChat } from "@/reports/export";
 import type { Bcp47, ElicitationContext, Sample } from "@/core/types";
 
-const FEATURE_TAGS: Record<string, string[]> = {
-  "en-preschool": ["Mazes", "Developmental errors", "WPM"],
-  "hi-conversation": ["Ergative ने", "Postposition case", "Code-mixing"],
-  "kn-conversation": ["Spoken register", "PNG cues", "Clausal density"],
-  "ta-narrative": ["Agglutination", "Participles", "Connectives"],
-  "te-narrative": ["Mahat agreement", "Quotative అని", "Switch points"],
-  "ml-conversation": ["Tense-only suffixes", "No agreement", "Sandhi"],
-  bilingual: ["Dense code-mixing", "Switch points", "Classroom register"],
-  unintelligible: ["Intelligibility %", "X / XXX markers", "NDW filter"],
-  short: ["SHORT warning", "Under 50 utt.", "Norm block"],
-};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -149,87 +138,35 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* --- Hero ---------------------------------------------------------- */}
-      <section className="hero p-6 md:p-10">
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
-          <div className="space-y-4">
-            <span className="eyebrow">Language sample analysis · English + 5 Indian languages</span>
-            <h1 className="hero-title">
-              From transcript to <span className="hl">clinical measures</span> in minutes.
-            </h1>
-            <p className="max-w-2xl text-base md:text-lg" style={{ color: "var(--text-muted)" }}>
-              Transcribe or import a language sample, get MLU, NDW, MATTR, MTLD, mazes, intelligibility
-              and code-mixing measures, then export a report. Built for SLPs, linguists and students,
-              and it runs in your browser.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <button type="button" className="btn btn-primary btn-lg" onClick={() => loadFixture("en-preschool", "/analyse")}>
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-                Try a sample in 30 seconds
-              </button>
-              <Link href="/compare" className="btn btn-lg no-underline">Compare two samples</Link>
-              <a href="#start" className="btn btn-lg no-underline">Start your own</a>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 pt-2">
-              {[
-                { code: "EN", name: "English (India)" },
-                { code: "HI", name: "हिन्दी Hindi" },
-                { code: "KN", name: "ಕನ್ನಡ Kannada" },
-                { code: "TA", name: "தமிழ் Tamil" },
-                { code: "TE", name: "తెలుగు Telugu" },
-                { code: "ML", name: "മലയാളം Malayalam" },
-              ].map((lang) => (
-                <span
-                  key={lang.code}
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium"
-                  style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-                >
-                  <span className="font-mono text-[10px] font-bold" style={{ color: "var(--accent-text)" }}>{lang.code}</span>
-                  <span>{lang.name}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <ol className="card space-y-4 p-5" aria-label="How it works">
-            <li className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--saffron-text)", listStyle: "none" }}>
-              How it works
-            </li>
-            {[
-              ["Capture", "Type in the Studio, record audio, or import SALT (.txt), CHAT (.cha) or ULASA JSON."],
-              ["Analyse", "Standard measures are computed on complete & intelligible utterances, with glossary help for each."],
-              ["Report", "Draft a report, compare two samples, and export PDF, DOCX, CSV, SALT or CHAT."],
-            ].map(([t, d], i) => (
-              <li key={t} className="flex gap-3" style={{ listStyle: "none" }}>
-                <span className="step-num">{i + 1}</span>
-                <div>
-                  <p className="font-semibold" style={{ color: "var(--text)" }}>{t}</p>
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>{d}</p>
-                </div>
-              </li>
-            ))}
-            <li className="border-t pt-3 text-xs" style={{ borderColor: "var(--border)", color: "var(--text-muted)", listStyle: "none" }}>
-              Open on any phone or laptop: <span className="url-chip">ulasa.vercel.app</span>
-            </li>
-          </ol>
+      <section className="hero max-w-3xl space-y-5">
+        <h1 className="hero-title">
+          Language sample analysis for <span className="hl">English and Indian languages</span>
+        </h1>
+        <p className="text-lg" style={{ color: "var(--text-muted)" }}>
+          Transcribe or import a sample, get standard LSA measures, compare sessions and export a
+          report — in English, Hindi, Kannada, Tamil, Telugu and Malayalam, right in your browser.
+        </p>
+        <div className="flex flex-wrap gap-3 pt-1">
+          <button type="button" className="btn btn-primary btn-lg" onClick={() => loadFixture("en-preschool", "/analyse")}>
+            Try a sample in 30 seconds
+          </button>
+          <a href="#start" className="btn btn-lg no-underline">Start your own sample</a>
         </div>
       </section>
 
       {/* --- Feature cards --------------------------------------------------- */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Features">
+      <section className="grid gap-4 md:grid-cols-3" aria-label="Features">
         {[
-          { icon: "M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129", title: "Indian-language packs", body: "Hindi, Kannada, Tamil, Telugu and Malayalam alongside English, with Indic-script shaping and code-mixing measures.", href: "/protocols" },
-          { icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", title: "Standard LSA measures", body: "Length, lexical diversity, mazes, intelligibility, rate and errors, each with a plain-language glossary entry.", href: "/glossary" },
-          { icon: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4", title: "Side-by-side compare", body: "Put baseline and follow-up (or two contexts) next to each other with the difference for every measure.", href: "/compare" },
-          { icon: "M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z", title: "Reports & exports", body: "Printable PDF, DOCX report, measures & utterance CSV, SALT-style text, CHAT and lossless JSON.", href: "/report" },
+          { title: "Standard measures", body: "MLU, NDW, MATTR, MTLD, mazes, intelligibility, rate and errors, each explained in the glossary.", href: "/glossary", cta: "Open glossary" },
+          { title: "Compare two samples", body: "Baseline and follow-up side by side, with the difference for every measure.", href: "/compare", cta: "Compare samples" },
+          { title: "Reports & exports", body: "Print to PDF, DOCX report, CSV, SALT-style text, CHAT and lossless JSON.", href: "/report", cta: "Draft a report" },
         ].map((f) => (
-          <Link key={f.title} href={f.href} className="card block p-4 no-underline transition-shadow hover:shadow-md">
-            <span className="feature-icon" aria-hidden="true">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={f.icon} /></svg>
-            </span>
-            <h2 className="mt-3 text-sm font-semibold" style={{ color: "var(--text)" }}>{f.title}</h2>
-            <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{f.body}</p>
+          <Link key={f.title} href={f.href} className="card block p-6 no-underline">
+            <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>{f.title}</h2>
+            <p className="mt-2 text-[0.9375rem]" style={{ color: "var(--text-muted)" }}>{f.body}</p>
+            <p className="mt-4 text-[0.9375rem] font-medium" style={{ color: "var(--accent)" }}>{f.cta} &rarr;</p>
           </Link>
         ))}
       </section>
@@ -237,8 +174,8 @@ export default function Dashboard() {
       {/* --- Start / Import Sample ------------------------------------------ */}
       <section id="start" className="card p-5 md:p-6 space-y-4 scroll-mt-24">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text)" }}>
-            Start a Sample
+          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
+            Start a sample
           </h2>
           <button
             type="button"
@@ -307,9 +244,9 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t" style={{ borderColor: "var(--border)" }}>
           <div className="flex flex-wrap items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
             <span>Supported imports:</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px]">.txt (SALT)</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px]">.cha (CHAT)</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px]">.json (ULASA)</span>
+            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">.txt (SALT)</span>
+            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">.cha (CHAT)</span>
+            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">.json (ULASA)</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -364,7 +301,7 @@ export default function Dashboard() {
       {/* --- Your Samples Table --------------------------------------------- */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold" style={{ color: "var(--text)" }}>
+          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
             Your Samples
           </h2>
           {samples.length > 0 && (
@@ -526,7 +463,7 @@ export default function Dashboard() {
       {/* --- Demonstration Samples Grid ------------------------------------- */}
       <section className="space-y-3">
         <div>
-          <h2 className="text-base font-semibold" style={{ color: "var(--text)" }}>
+          <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
             Demonstration Samples
           </h2>
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -536,14 +473,13 @@ export default function Dashboard() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FIXTURES.map((fixture) => {
-            const tags = FEATURE_TAGS[fixture.id] || [];
-
+            
             return (
               <div
                 key={fixture.id}
                 role="button"
                 tabIndex={0}
-                className="card p-4 text-left transition-all hover:shadow-md cursor-pointer flex flex-col justify-between"
+                className="card p-5 text-left transition-all hover:shadow-md cursor-pointer flex flex-col justify-between"
                 onClick={() => loadFixture(fixture.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -554,33 +490,20 @@ export default function Dashboard() {
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-sm leading-snug" style={{ color: "var(--text)" }}>
+                    <h3 className="font-semibold text-base leading-snug" style={{ color: "var(--text)" }}>
                       {fixture.label}
                     </h3>
-                    <span className="badge badge-local font-mono text-[10px] shrink-0">
+                    <span className="badge badge-local font-mono text-xs shrink-0">
                       {fixture.language}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
                     {fixture.description}
                   </p>
                 </div>
 
-                <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded px-1.5 py-0.2 text-[10px] font-medium"
-                          style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1 text-[11px] font-medium" style={{ color: "var(--accent)" }}>
+                <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center gap-1 text-sm font-medium" style={{ color: "var(--accent)" }}>
                     <span>Load demonstration transcript</span>
                     <span>&rarr;</span>
                   </div>
@@ -592,64 +515,15 @@ export default function Dashboard() {
       </section>
 
       {/* --- Capabilities & Privacy Trust Card ------------------------------- */}
-      <section className="grid gap-4 md:grid-cols-2">
-        {/* Core Capabilities */}
-        <div className="card p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5" style={{ color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text)" }}>
-              Automated Clinical Metrics
-            </h2>
-          </div>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Everything below executes locally in this browser at zero cost:
-          </p>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" style={{ color: "var(--text)" }}>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Length:</strong> MLU-w, MLU-m, SD</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Lexical:</strong> NDW, TTR, MATTR</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Diversity:</strong> MTLD, HD-D vocd</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Facility:</strong> Mazes & pauses</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Syntax:</strong> Clausal density</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Errors:</strong> Language taxonomies</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Rubrics:</strong> Narrative & Persuasion</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }}></span>
-              <span><strong>Export:</strong> PDF, DOCX, CSV, SALT</span>
-            </li>
-          </ul>
-        </div>
-
+      <section>
         {/* Privacy & Local Architecture */}
         <div className="card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--text)" }}>
-              Privacy & Local Architecture
+            <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+              Privacy & local architecture
             </h2>
           </div>
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>

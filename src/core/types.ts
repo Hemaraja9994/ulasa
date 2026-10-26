@@ -73,6 +73,9 @@ export interface Token {
   /** Marked `X` / `XX`: heard but not identifiable. */
   isUnintelligible?: boolean;
   errorCodes?: string[];
+  /** Explicit language tag the clinician attached with a whitespace-separated
+   *  `/xx` marker (e.g. `science /en`), kept verbatim as an annotation. */
+  langTag?: string;
 }
 
 export type Grammaticality = "grammatical" | "ungrammatical" | "unmarked";

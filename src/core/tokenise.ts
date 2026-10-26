@@ -17,6 +17,8 @@ import { normaliseToken } from "@/nlp/pack";
  *                 or to the whole utterance if it appears at the end
  *   (:2.5)        silent pause of 2.5 seconds
  *   +comment      clinician comment, excluded from all counts
+ *   word /en      language tag (whitespace-separated) annotating the previous
+ *                 word; it is never counted as a token
  *
  * Everything the parser does not recognise is treated as an ordinary word. It
  * never discards text silently.
@@ -34,6 +36,19 @@ export interface ParsedUtterance {
 const PAUSE_RE = /\(:\s*([0-9]+(?:\.[0-9]+)?)\s*\)/g;
 const MAZE_OPEN = "(";
 const MAZE_CLOSE = ")";
+/** A free-standing language tag such as `/en`, `/hi` or `/en-IN`. */
+const LANG_TAG_RE = /^\/([A-Za-z]{2,3}(?:-[A-Za-z]{2})?)[.,!?;:।॥]*$/;
+
+/** Resolves a short tag (`en`) to the BCP-47 code the pack uses for it. */
+function resolveLangTag(tag: string, pack: LanguagePack): Token["lang"] {
+  const lower = tag.toLowerCase();
+  const candidates = [pack.id, ...pack.codeMixPartners] as string[];
+  const exact = candidates.find((c) => c.toLowerCase() === lower);
+  if (exact) return exact as Token["lang"];
+  const byPrefix = candidates.find((c) => c.toLowerCase().split("-")[0] === lower.split("-")[0]);
+  if (byPrefix) return byPrefix as Token["lang"];
+  return (lower.includes("-") ? tag : `${lower}-IN`) as Token["lang"];
+}
 
 /** Classifies a maze span given its tokens and what follows it. */
 function classifyMaze(
@@ -118,6 +133,15 @@ export function parseUtteranceText(raw: string, pack: LanguagePack): ParsedUtter
       mazeWords = [];
     }
     depth += opens;
+
+    const tagMatch = word.match(LANG_TAG_RE);
+    if (tagMatch && tokens.length > 0) {
+      // Annotate the preceding word; the tag itself is not a token.
+      const prev = tokens[tokens.length - 1];
+      prev.langTag = tagMatch[1];
+      if (!prev.isUnintelligible) prev.lang = resolveLangTag(tagMatch[1], pack);
+      word = "";
+    }
 
     if (word.length > 0) {
       const token = makeToken(word, pack);

@@ -138,7 +138,7 @@ export default function Compare() {
   }
 
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex min-w-0 flex-col gap-5">
         <section className="panel flex min-w-0 flex-col gap-3.5 px-6 py-[22px]" aria-labelledby="profile-title">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -274,7 +274,7 @@ function ProfileRow({ row, zReason }: { row: Row; zReason: string }) {
       <span className="tnum text-right" style={{ fontSize: 14, color: "var(--text-muted)" }}>{fmt(va)}</span>
       <span className="tnum text-right font-semibold" style={{ fontSize: 14 }}>{fmt(vb)}</span>
       <span className="mono text-right" style={{ fontSize: 13, color: "var(--accent-text)" }}>
-        {delta === null ? "" : `${delta >= 0 ? "+" : "−"}${Math.abs(delta).toFixed(row.dp)}`}
+        {delta === null ? "" : `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${Math.abs(delta).toFixed(row.dp)}`}
       </span>
       <div className="relative h-[26px]" aria-hidden="true">
         <div className="absolute inset-x-0 top-3 h-0.5" style={{ background: "var(--surface-2)" }} />

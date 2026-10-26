@@ -103,7 +103,7 @@ export default function Code() {
             clause override replaces the heuristic count.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3.5">
+        <div className="ml-auto flex flex-wrap items-center gap-3.5">
           <div className="flex flex-col items-end gap-[5px]">
             <span style={{ fontSize: 13 }}>
               <b className="tnum">{marked.length}</b> of {set.length} marked · PGU <b>{pgu}</b>

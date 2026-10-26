@@ -310,9 +310,9 @@ export default function Studio() {
       : "All changes saved";
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-4">
-        <div className="seg self-start overflow-x-auto" role="group" aria-label="Input method">
+        <div className="seg max-w-full self-start overflow-x-auto" role="group" aria-label="Input method">
           {INPUT_METHODS.map((m) => (
             <button key={m.id} type="button" className="seg-btn" aria-pressed={method === m.id} onClick={() => setMethod(m.id as InputMethod)}>
               {m.label}

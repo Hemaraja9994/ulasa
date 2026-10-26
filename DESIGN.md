@@ -94,3 +94,16 @@
     2. Privacy & Local Architecture trust card (Zero server, IndexedDB audio, local sidecar fallback).
 - **Footer**:
   - Refined attribution: Dr. Amoolya G & Mr. Hemaraja Nayaka.S.
+
+---
+
+## 5. Redesign additions (Oct 2026, "evidence-linked workspace")
+
+The live palette is the Indigo & Saffron set in `src/app/globals.css`; the teal values above are historical. The redesign adds:
+
+- `--accent-mid` `#A5B4FC` (selected tiles, earlier-session bars, insertion ring)
+- `--success` / `--success-soft` / `--success-text` / `--success-border` (privacy pill, "Reported", "Descriptive")
+- `--ok-text` (grammatical ✓), `--danger-tint` (ungrammatical row), `--header-bg`, `--shadow-page` (A4 report)
+- Type: IBM Plex Sans (UI), IBM Plex Mono (codes, ids, transcript editor) and Noto Sans Devanagari / Kannada / Tamil / Telugu / Malayalam, self-hosted via `@fontsource`.
+- Primitives: `.caps`, `.seg` / `.seg-btn`, `.pill` (`-neutral`, `-short`, `-exp`, `-privacy`), `.status-*`, `.trow-head` / `.trow`, `.panel`, `.hscroll`.
+- Measure status badges: Established, Descriptive (code-mixing), Experimental, Unavailable (renders "—", never 0).

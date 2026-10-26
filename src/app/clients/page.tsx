@@ -8,7 +8,7 @@ import { getPack } from "@/nlp/registry";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { useSampleActions } from "@/lib/useSampleActions";
 import { byDate, caseLabel, contextLabel, formatAge, formatDate, formatShortDate } from "@/lib/format";
-import { findMeasure } from "@/lib/measures";
+import { displayValue, findMeasure } from "@/lib/measures";
 import { deleteAudio } from "@/lib/audio";
 import type { Sample } from "@/core/types";
 
@@ -67,7 +67,8 @@ export default function Clients() {
           sample: s,
           n: a.analysisSetSize,
           mlu: findMeasure(a, "mlu_w")?.value ?? null,
-          ndw: findMeasure(a, "ndw")?.value ?? null,
+          mluText: displayValue(findMeasure(a, "mlu_w")),
+          ndw: displayValue(findMeasure(a, "ndw")),
           reported: Boolean(reportDrafts[s.id]?.trim()),
         };
       }),
@@ -108,7 +109,7 @@ export default function Clients() {
   }
 
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="panel overflow-hidden" aria-label="Cases">
         <div className="border-b p-3" style={{ borderColor: "var(--border)" }}>
           <input className="input" style={{ fontSize: 14 }} placeholder="Search case IDs" aria-label="Search case IDs" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -182,7 +183,7 @@ export default function Clients() {
             <div className="flex h-[110px] items-end gap-7 border-b px-2" style={{ borderColor: "var(--border)", minWidth: "fit-content" }} role="img" aria-label="MLU in words for each session">
               {rows.map((r, i) => (
                 <div key={r.sample.id} className="flex w-[72px] flex-none flex-col items-center gap-1.5">
-                  <span className="tnum font-semibold" style={{ fontSize: 13 }}>{r.mlu ?? "—"}</span>
+                  <span className="tnum font-semibold" style={{ fontSize: 13 }}>{r.mluText}</span>
                   <div className="w-9 rounded-t-[5px]" style={{ height: r.mlu ? Math.round((r.mlu / maxMlu) * 80) : 2, background: i === rows.length - 1 ? "var(--accent)" : "var(--accent-mid)" }} />
                 </div>
               ))}
@@ -219,8 +220,8 @@ export default function Clients() {
                 <span>{getPack(r.sample.language).name}</span>
                 <span>{contextLabel(r.sample.elicitationContext)}</span>
                 <span className="tnum text-right" style={{ color: r.n < MIN_SET ? "var(--warn-text)" : "var(--text)" }} title={r.n < MIN_SET ? "Below the 50-utterance convention" : undefined}>{r.n}</span>
-                <span className="tnum text-right">{r.mlu ?? "—"}</span>
-                <span className="tnum text-right">{r.ndw ?? "—"}</span>
+                <span className="tnum text-right">{r.mluText}</span>
+                <span className="tnum text-right">{r.ndw}</span>
                 <span className="text-right">
                   <span className="pill" style={{ fontSize: 11.5, fontWeight: 600, padding: "2px 9px", background: r.reported ? "var(--success-soft)" : "var(--surface-2)", color: r.reported ? "var(--success-text)" : "var(--text-muted)" }}>
                     {r.reported ? "Reported" : "Draft"}

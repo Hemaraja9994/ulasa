@@ -56,12 +56,6 @@ export function byDate(a: Sample, b: Sample): number {
   return a.title.localeCompare(b.title);
 }
 
-/** Formats a measure value with its percent sign when the unit is "%". */
-export function fmtValue(value: number | null | undefined, unit?: string): string {
-  if (value === null || value === undefined) return "—";
-  return unit === "%" ? `${value}%` : String(value);
-}
-
 /** "5;2" (years;months), the clinical convention. */
 export function formatAge(years?: number, months?: number): string | null {
   if (years === undefined) return null;

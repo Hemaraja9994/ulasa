@@ -11,7 +11,7 @@ import { Hydrated } from "@/components/Hydrated";
 import { getPack } from "@/nlp/registry";
 import { CONTEXT_LABELS, contextLabel, formatDate } from "@/lib/format";
 import { useSampleActions } from "@/lib/useSampleActions";
-import { findMeasure } from "@/lib/measures";
+import { displayValue, findMeasure } from "@/lib/measures";
 import type { Bcp47, ElicitationContext } from "@/core/types";
 
 /** Feature tags for the demonstration cards. */
@@ -49,7 +49,9 @@ export default function Home() {
         const { sample } = parseSaltText(f.text, { language: f.language as Bcp47 });
         const target = sample.speakers.find((s) => s.isTarget);
         const first = sample.utterances.find((u) => u.speakerId === target?.id);
-        return { ...f, line: first?.text ?? f.description, tags: DEMO_TAGS[f.id] ?? [] };
+        // Language tags such as "science /en" are annotations, not text; hide them here.
+        const line = (first?.text ?? f.description).replace(/\s\/[A-Za-z]{2,3}(?:-[A-Za-z]{2})?(?=[\s.,!?।]|$)/g, "");
+        return { ...f, line, tags: DEMO_TAGS[f.id] ?? [] };
       }),
     [],
   );
@@ -61,8 +63,8 @@ export default function Home() {
         return {
           sample: s,
           n: analysisSet(s).length,
-          mlu: findMeasure(analysis, "mlu_w")?.value ?? null,
-          ndw: findMeasure(analysis, "ndw")?.value ?? null,
+          mlu: displayValue(findMeasure(analysis, "mlu_w")),
+          ndw: displayValue(findMeasure(analysis, "ndw")),
         };
       }),
     [samples],
@@ -84,7 +86,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-10">
       {/* --- hero + new sample ------------------------------------------- */}
-      <section className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <section className="grid grid-cols-[minmax(0,1fr)] items-start gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-5 pt-3">
           <span className="eyebrow self-start" style={{ fontSize: 11.5, letterSpacing: "0.07em", padding: "4px 10px" }}>
             Free · open source · runs in your browser
@@ -244,8 +246,8 @@ export default function Home() {
                       <span className="tnum font-semibold">{n}</span>
                       {n > 0 && n < 50 && <span className="pill pill-short" title="Below the 50-utterance convention">SHORT</span>}
                     </span>
-                    <span className="tnum text-right">{mlu ?? "—"}</span>
-                    <span className="tnum text-right">{ndw ?? "—"}</span>
+                    <span className="tnum text-right">{mlu}</span>
+                    <span className="tnum text-right">{ndw}</span>
                     <span className="text-right font-medium" style={{ color: "var(--accent)", fontSize: 13.5 }}>Open →</span>
                   </div>
                 ))}

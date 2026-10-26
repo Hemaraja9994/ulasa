@@ -8,7 +8,7 @@ import { countableWords } from "@/core/tokenise";
 import { getPack } from "@/nlp/registry";
 import { GLOSSARY_BY_KEY } from "@/data/glossary";
 import { UtteranceTokens } from "@/components/UtteranceTokens";
-import { findMeasure, statusLabel } from "@/lib/measures";
+import { displayValue, findMeasure, statusLabel } from "@/lib/measures";
 import type { AnalysisResult, MeasureValue, Sample } from "@/core/types";
 import type { LanguagePack } from "@/nlp/pack";
 
@@ -143,7 +143,7 @@ function Workspace({ sample, analysis }: { sample: Sample; analysis: AnalysisRes
         </details>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_440px]">
         {/* --- transcript ---------------------------------------------------- */}
         <section className="panel order-2 flex min-w-0 flex-col lg:order-1" aria-label="Transcript with evidence">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b px-[18px] py-3" style={{ borderColor: "var(--border)" }}>
@@ -283,7 +283,7 @@ function MeasureList({
                 <span className="flex flex-none items-center gap-2">
                   {m.status === "experimental" && <span className="pill-exp rounded-full">Exp.</span>}
                   <span className="tnum font-semibold" style={{ fontSize: 15, color: missing ? "var(--text-muted)" : "var(--text)" }}>
-                    {missing ? "—" : `${m.value}${m.unit === "%" ? "%" : ""}`}
+                    {displayValue(m)}
                   </span>
                 </span>
               </button>
@@ -340,7 +340,7 @@ function DetailCard({
     <div className="panel flex flex-col gap-3 p-5" aria-live="polite">
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium" style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          {measure.label}
+          {shortLabel(measure)}
           {glossary && (
             <Link href={`/glossary#${measure.key}`} className="glossary-tip ml-1.5" title={glossary.short} aria-label={`What is ${measure.label}?`}>?</Link>
           )}
@@ -348,7 +348,7 @@ function DetailCard({
         <span className={`status status-${status.toLowerCase()}`}>{status}</span>
       </div>
       <div className="tnum font-semibold" style={{ fontSize: 44, letterSpacing: "-0.03em", lineHeight: 1, color: missing ? "var(--text-muted)" : "var(--text)" }}>
-        {missing ? "—" : measure.value}
+        {missing ? "—" : displayValue({ ...measure, unit: undefined })}
         {!missing && measure.unit === "%" && <span style={{ fontSize: 18, fontWeight: 500, color: "var(--text-muted)" }}>%</span>}
         {!missing && measure.unit && measure.unit !== "%" && (
           <span className="ml-1.5" style={{ fontSize: 14, fontWeight: 500, letterSpacing: 0, color: "var(--text-muted)" }}>{measure.unit}</span>

@@ -16,8 +16,8 @@ import {
 } from "@/reports/export";
 import { getPack } from "@/nlp/registry";
 import { RUBRICS, scoreRubric } from "@/core/rubrics";
-import { caseLabel, contextLabel, formatAge, formatDate, formatDuration, fmtValue, parseAge } from "@/lib/format";
-import { findMeasure, statusLabel } from "@/lib/measures";
+import { caseLabel, contextLabel, formatAge, formatDate, formatDuration, parseAge } from "@/lib/format";
+import { displayValue, findMeasure, statusLabel } from "@/lib/measures";
 import type { AnalysisResult, Sample } from "@/core/types";
 
 /**
@@ -120,13 +120,13 @@ function ReportView({ sample, analysis }: { sample: Sample; analysis: AnalysisRe
     // Code-mix is reported only where it applies; an English sample shows none.
     if (key === "codemix_ratio" && !isIndic && !m.value) return [];
     const status = key === "analysis_set" ? (short ? "Below convention" : "At convention") : statusLabel(m);
-    return [{ key, label, value: fmtValue(m.value, m.unit), status }];
+    return [{ key, label, value: displayValue(m), status }];
   });
 
   const exportBtn = { fontSize: 13.5, padding: 8 };
 
   return (
-    <div className="report-grid grid items-start gap-7 lg:grid-cols-[260px_minmax(0,1fr)]">
+    <div className="report-grid grid grid-cols-[minmax(0,1fr)] items-start gap-7 lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="no-print flex flex-col gap-4 lg:sticky lg:top-[140px]">
         <div className="panel flex flex-col gap-2.5 p-4">
           <span className="caps">Include</span>

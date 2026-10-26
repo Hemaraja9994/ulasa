@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Readable type scale: xs 13px, sm 15px, base 16px. */
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5rem;
+}
+
 /*
  * ULASA visual system.
  *
@@ -8,18 +16,28 @@
  * long stretches). All colour pairs meet WCAG 2.2 AA at body size.
  */
 
+/*
+ * Conference refresh (Oct 2026): "Indigo & Saffron". Indigo carries the
+ * interface; saffron is a sparing highlight. Text pairs meet WCAG AA (most AAA).
+ */
 :root {
-  --bg: #F8FAFC;
+  --bg: #F6F6FB;
   --surface: #FFFFFF;
-  --surface-2: #F1F5F9;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --text: #0F172A;
-  --text-muted: #64748B;
-  --accent: #0D9488;
-  --accent-hover: #0F766E;
-  --accent-soft: #CCFBF1;
-  --accent-text: #115E59;
+  --surface-2: #EEF0F8;
+  --border: #E1E4F0;
+  --border-strong: #C5CADF;
+  --text: #14162B;
+  --text-muted: #535975;
+  --accent: #4338CA;
+  --accent-hover: #3730A3;
+  --accent-soft: #E0E7FF;
+  --accent-text: #312E81;
+  --on-accent: #FFFFFF;
+  --saffron: #F59E0B;
+  --saffron-soft: #FEF3C7;
+  --saffron-text: #92400E;
+  --hero-from: #EEF0FF;
+  --hero-to: #FFF7E6;
   --warn: #D97706;
   --warn-soft: #FEF3C7;
   --warn-border: #FDE68A;
@@ -33,17 +51,23 @@
 }
 
 :root[data-theme="dark"], :root:not([data-theme="light"]) {
-  --bg: #0B0F17;
-  --surface: #131B2A;
-  --surface-2: #1E293B;
-  --border: #1E293B;
-  --border-strong: #334155;
-  --text: #F8FAFC;
-  --text-muted: #94A3B8;
-  --accent: #14B8A6;
-  --accent-hover: #2DD4BF;
-  --accent-soft: rgba(20, 184, 166, 0.15);
-  --accent-text: #5EEAD4;
+  --bg: #0B0C1A;
+  --surface: #14162C;
+  --surface-2: #1D2040;
+  --border: #262A4D;
+  --border-strong: #3A3F6E;
+  --text: #F5F6FF;
+  --text-muted: #A9AECB;
+  --accent: #A5B4FC;
+  --accent-hover: #C7D2FE;
+  --accent-soft: rgba(129, 140, 248, 0.16);
+  --accent-text: #C7D2FE;
+  --on-accent: #14162B;
+  --saffron: #FBBF24;
+  --saffron-soft: rgba(251, 191, 36, 0.14);
+  --saffron-text: #FCD34D;
+  --hero-from: #1A1C3D;
+  --hero-to: #2A1E12;
   --warn: #F59E0B;
   --warn-soft: rgba(245, 158, 11, 0.15);
   --warn-border: rgba(245, 158, 11, 0.35);
@@ -57,17 +81,23 @@
 }
 
 :root[data-theme="light"] {
-  --bg: #F8FAFC;
+  --bg: #F6F6FB;
   --surface: #FFFFFF;
-  --surface-2: #F1F5F9;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --text: #0F172A;
-  --text-muted: #64748B;
-  --accent: #0D9488;
-  --accent-hover: #0F766E;
-  --accent-soft: #CCFBF1;
-  --accent-text: #115E59;
+  --surface-2: #EEF0F8;
+  --border: #E1E4F0;
+  --border-strong: #C5CADF;
+  --text: #14162B;
+  --text-muted: #535975;
+  --accent: #4338CA;
+  --accent-hover: #3730A3;
+  --accent-soft: #E0E7FF;
+  --accent-text: #312E81;
+  --on-accent: #FFFFFF;
+  --saffron: #F59E0B;
+  --saffron-soft: #FEF3C7;
+  --saffron-text: #92400E;
+  --hero-from: #EEF0FF;
+  --hero-to: #FFF7E6;
   --warn: #D97706;
   --warn-soft: #FEF3C7;
   --warn-border: #FDE68A;
@@ -96,7 +126,7 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
@@ -135,7 +165,7 @@ body {
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
@@ -154,7 +184,7 @@ body {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #FFFFFF;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -181,7 +211,7 @@ body {
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: 1rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -231,7 +261,7 @@ body {
 .notice {
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   border: 1px solid;
 }
 
@@ -245,6 +275,94 @@ body {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent-text);
+}
+
+/* --- landing / conference ----------------------------------------------- */
+
+.hero {
+  padding: 2.5rem 0 1rem;
+}
+
+.hero-title {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.hero-title .hl { color: var(--accent); }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--saffron-soft);
+  color: var(--saffron-text);
+  border: 1px solid color-mix(in srgb, var(--saffron) 45%, transparent);
+}
+
+.btn-lg { padding: 0.75rem 1.3rem; font-size: 1rem; border-radius: 10px; }
+
+.step-num {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 800;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.feature-icon {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.url-chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.glossary-tip {
+  display: inline-flex;
+  height: 1.05rem;
+  width: 1.05rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  cursor: help;
+  text-decoration: none;
+}
+
+.glossary-tip:hover { color: var(--accent-text); border-color: var(--accent); }
+
+.delta-up { color: #059669; }
+.delta-down { color: var(--danger); }
+:root:not([data-theme="light"]) .delta-up { color: #34D399; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
 }
 
 /* --- focus and accessibility --------------------------------------------- */

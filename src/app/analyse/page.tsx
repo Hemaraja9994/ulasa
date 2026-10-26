@@ -16,6 +16,7 @@ import {
 } from "@/reports/export";
 import { pickExemplars } from "@/reports/interpret";
 import type { MeasureValue } from "@/core/types";
+import { GLOSSARY_BY_KEY } from "@/data/glossary";
 
 export default function Analyse() {
   const sample = useActiveSample();
@@ -48,10 +49,10 @@ export default function Analyse() {
   const exemplars = pickExemplars(sample);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Standard Measures</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Standard Measures</h1>
           <p className="mt-0.5 text-sm" style={{ color: "var(--text-muted)" }}>
             {sample.title} · {pack.name} · {analysis.analysisSetSize} complete and intelligible
             verbal utterances
@@ -76,11 +77,11 @@ export default function Analyse() {
       )}
 
       {/* --- measures ------------------------------------------------------ */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {analysis.groups.map((group) => (
           <section key={group.id} className="card overflow-hidden">
             <h2
-              className="border-b px-4 py-2.5 text-sm font-semibold"
+              className="border-b px-5 py-3 text-base font-semibold"
               style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
             >
               {group.label}
@@ -181,10 +182,20 @@ export default function Analyse() {
 function MeasureRow({ measure }: { measure: MeasureValue }) {
   const unavailable = measure.value === null;
   return (
-    <div className="px-4 py-2.5">
+    <div className="px-5 py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm" style={{ color: unavailable ? "var(--text-muted)" : "var(--text)" }}>
+        <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: unavailable ? "var(--text-muted)" : "var(--text)" }}>
           {measure.label}
+          {GLOSSARY_BY_KEY[measure.key] && (
+            <Link
+              href={`/glossary#${measure.key}`}
+              className="glossary-tip no-print"
+              title={GLOSSARY_BY_KEY[measure.key].short}
+              aria-label={`What is ${measure.label}? ${GLOSSARY_BY_KEY[measure.key].short}`}
+            >
+              ?
+            </Link>
+          )}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {measure.status === "experimental" && (

@@ -101,8 +101,16 @@ export function estimateClauses(utterance: Utterance, pack: LanguagePack): numbe
  * The complete-and-intelligible verbal analysis set, following SALT's C&I
  * convention: the target speaker's verbal utterances that are neither
  * abandoned/interrupted nor unintelligible.
+ *
+ * SALT excludes any utterance containing an unintelligible segment (X/XX/XXX),
+ * so partly intelligible utterances are left out by default. Pass
+ * `{ includePartial: true }` for the looser set (verbal, not fully
+ * unintelligible) if a secondary view is needed.
  */
-export function analysisSet(sample: Sample): Utterance[] {
+export function analysisSet(
+  sample: Sample,
+  options: { includePartial?: boolean } = {},
+): Utterance[] {
   const target = sample.speakers.find((s) => s.isTarget);
   if (!target) return [];
   return sample.utterances.filter(
@@ -110,7 +118,9 @@ export function analysisSet(sample: Sample): Utterance[] {
       u.speakerId === target.id &&
       !u.isAbandoned &&
       !u.isNonVerbal &&
-      u.intelligibility !== "unintelligible" &&
+      (options.includePartial
+        ? u.intelligibility !== "unintelligible"
+        : u.intelligibility === "intelligible") &&
       countableWords(u.tokens).length > 0,
   );
 }
